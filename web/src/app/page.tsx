@@ -119,21 +119,32 @@ function PersonCard({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href={`/persons/${person.id}/edit`}
-            className="text-xs font-medium text-emerald-700 hover:underline"
-          >
-            Edit
-          </Link>
-          <button
-            onClick={() => {
-              if (confirm(`Delete ${person.name}?`)) onDelete();
-            }}
-            className="text-xs text-stone-400 hover:text-red-600"
-            title="Delete"
-          >
-            ✕
-          </button>
+          {person.can_edit ? (
+            <>
+              <Link
+                href={`/persons/${person.id}/edit`}
+                className="text-xs font-medium text-emerald-700 hover:underline"
+              >
+                Edit
+              </Link>
+              <button
+                onClick={() => {
+                  if (confirm(`Delete ${person.name}?`)) onDelete();
+                }}
+                className="text-xs text-stone-400 hover:text-red-600"
+                title="Delete"
+              >
+                ✕
+              </button>
+            </>
+          ) : (
+            <span
+              className="rounded bg-stone-100 px-1.5 py-0.5 text-xs font-medium text-stone-500"
+              title="You can read this entry but only the owner can modify it."
+            >
+              Read-only
+            </span>
+          )}
         </div>
       </div>
 

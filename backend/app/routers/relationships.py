@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
@@ -10,7 +10,7 @@ from ..relationship import (
     name_relationship,
     build_relationship_path,
 )
-from ..scope import assert_owns_person
+from ..scope import get_visible_person
 
 router = APIRouter(prefix="/relationships", tags=["relationships"])
 
@@ -21,8 +21,8 @@ def find_relationship(
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    person_a = assert_owns_person(db, user, a)
-    person_b = assert_owns_person(db, user, b)
+    person_a = get_visible_person(db, user, a)
+    person_b = get_visible_person(db, user, b)
 
     if a == b:
         return schemas.RelationshipResult(

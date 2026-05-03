@@ -47,8 +47,8 @@ def _signup(client, email):
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
-def test_user_isolation(client):
-    """Two users see only their own people."""
+def test_all_users_can_read_each_others_data(client):
+    """In the current visibility model, every authenticated user reads all entries."""
     h_alice = _signup(client, "alice@example.com")
     h_bob = _signup(client, "bob@example.com")
 
@@ -58,17 +58,46 @@ def test_user_isolation(client):
     alice_list = client.get("/persons", headers=h_alice).json()
     bob_list = client.get("/persons", headers=h_bob).json()
 
-    assert [p["name"] for p in alice_list] == ["Alice's Mom"]
-    assert [p["name"] for p in bob_list] == ["Bob's Dad"]
+    alice_names = sorted(p["name"] for p in alice_list)
+    bob_names = sorted(p["name"] for p in bob_list)
+    assert alice_names == ["Alice's Mom", "Bob's Dad"]
+    assert bob_names == ["Alice's Mom", "Bob's Dad"]
 
 
-def test_cannot_access_other_users_person(client):
+def test_can_edit_flag_reflects_ownership(client):
     h_alice = _signup(client, "alice@example.com")
     h_bob = _signup(client, "bob@example.com")
 
-    pid = client.post("/persons", headers=h_alice, json={"name": "Secret"}).json()["id"]
-    r = client.get(f"/persons/{pid}", headers=h_bob)
-    assert r.status_code == 404  # 404 not 403 to avoid leaking existence
+    pid = client.post("/persons", headers=h_alice, json={"name": "Mom"}).json()["id"]
+
+    # Alice owns it
+    assert client.get(f"/persons/{pid}", headers=h_alice).json()["can_edit"] is True
+    # Bob can read but not edit
+    assert client.get(f"/persons/{pid}", headers=h_bob).json()["can_edit"] is False
+
+
+def test_non_owner_cannot_modify(client):
+    h_alice = _signup(client, "alice@example.com")
+    h_bob = _signup(client, "bob@example.com")
+
+    pid = client.post("/persons", headers=h_alice, json={"name": "Mom"}).json()["id"]
+
+    # Bob can read
+    assert client.get(f"/persons/{pid}", headers=h_bob).status_code == 200
+    # Bob cannot patch
+    r = client.patch(f"/persons/{pid}", headers=h_bob, json={"name": "Hacked"})
+    assert r.status_code == 403
+    # Bob cannot delete
+    r = client.delete(f"/persons/{pid}", headers=h_bob)
+    assert r.status_code == 403
+
+
+def test_owner_can_modify_own_entries(client):
+    h_alice = _signup(client, "alice@example.com")
+    pid = client.post("/persons", headers=h_alice, json={"name": "Mom"}).json()["id"]
+    r = client.patch(f"/persons/{pid}", headers=h_alice, json={"name": "Mum"})
+    assert r.status_code == 200
+    assert r.json()["name"] == "Mum"
 
 
 def test_admin_sees_everyones_data(client):

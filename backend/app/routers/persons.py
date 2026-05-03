@@ -8,12 +8,17 @@ from ..deps import get_current_user
 from ..relationship import (
     get_parents, get_children, get_spouses, ancestors_with_depth,
 )
-from ..scope import assert_owns_person, scope_persons, user_owns_persons
+from ..scope import (
+    scope_persons_read,
+    get_visible_person,
+    get_writable_person,
+    can_write_person,
+)
 
 router = APIRouter(prefix="/persons", tags=["persons"])
 
 
-def _to_out(db: Session, person: models.Person) -> schemas.PersonOut:
+def _to_out(db: Session, person: models.Person, user: models.User) -> schemas.PersonOut:
     return schemas.PersonOut(
         id=person.id,
         name=person.name,
@@ -24,6 +29,8 @@ def _to_out(db: Session, person: models.Person) -> schemas.PersonOut:
         parent_ids=get_parents(db, person.id),
         children_ids=get_children(db, person.id),
         spouse_ids=get_spouses(db, person.id),
+        owner_id=person.user_id,
+        can_edit=can_write_person(user, person),
     )
 
 
@@ -33,11 +40,11 @@ def search_persons(
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    query = scope_persons(db.query(models.Person), user)
+    query = scope_persons_read(db.query(models.Person), user)
     if q.strip():
         query = query.filter(models.Person.name.ilike(f"%{q.strip()}%"))
     rows = query.order_by(models.Person.name).limit(limit).all()
-    return [_to_out(db, p) for p in rows]
+    return [_to_out(db, p, user) for p in rows]
 
 
 @router.post("", response_model=schemas.PersonOut, status_code=201)
@@ -49,9 +56,9 @@ def create_person(
     if len(payload.parent_ids) > 2:
         raise HTTPException(400, "A person can have at most 2 parents")
 
-    # Validate parents exist AND belong to this user (or admin)
+    # Parents just need to exist; readers can attach their entries to any visible parent.
     for pid in payload.parent_ids:
-        assert_owns_person(db, user, pid)
+        get_visible_person(db, user, pid)
 
     person = models.Person(
         user_id=user.id,
@@ -68,7 +75,7 @@ def create_person(
     for pid in payload.parent_ids:
         db.add(models.ParentChild(parent_id=pid, child_id=person.id))
     db.commit()
-    return _to_out(db, person)
+    return _to_out(db, person, user)
 
 
 @router.get("", response_model=List[schemas.PersonOut])
@@ -77,11 +84,11 @@ def list_persons(
     user: models.User = Depends(get_current_user),
 ):
     rows = (
-        scope_persons(db.query(models.Person), user)
+        scope_persons_read(db.query(models.Person), user)
         .order_by(models.Person.id)
         .all()
     )
-    return [_to_out(db, p) for p in rows]
+    return [_to_out(db, p, user) for p in rows]
 
 
 @router.get("/{person_id}", response_model=schemas.PersonOut)
@@ -90,8 +97,8 @@ def get_person(
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    person = assert_owns_person(db, user, person_id)
-    return _to_out(db, person)
+    person = get_visible_person(db, user, person_id)
+    return _to_out(db, person, user)
 
 
 @router.patch("/{person_id}", response_model=schemas.PersonOut)
@@ -100,12 +107,12 @@ def update_person(
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    person = assert_owns_person(db, user, person_id)
+    person = get_writable_person(db, user, person_id)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(person, field, value)
     db.commit()
     db.refresh(person)
-    return _to_out(db, person)
+    return _to_out(db, person, user)
 
 
 @router.delete("/{person_id}", status_code=204)
@@ -114,7 +121,7 @@ def delete_person(
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    person = assert_owns_person(db, user, person_id)
+    person = get_writable_person(db, user, person_id)
     db.query(models.ParentChild).filter(
         (models.ParentChild.parent_id == person_id)
         | (models.ParentChild.child_id == person_id)
@@ -133,8 +140,9 @@ def add_parent(
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    person = assert_owns_person(db, user, person_id)
-    parent = assert_owns_person(db, user, link.parent_id)
+    # Must be able to write the child; parent only needs to exist
+    person = get_writable_person(db, user, person_id)
+    get_visible_person(db, user, link.parent_id)
     if person_id == link.parent_id:
         raise HTTPException(400, "A person cannot be their own parent")
 
@@ -150,7 +158,7 @@ def add_parent(
 
     db.add(models.ParentChild(parent_id=link.parent_id, child_id=person_id))
     db.commit()
-    return _to_out(db, person)
+    return _to_out(db, person, user)
 
 
 @router.delete("/{person_id}/parents/{parent_id}", status_code=204)
@@ -159,7 +167,7 @@ def remove_parent(
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    assert_owns_person(db, user, person_id)
+    get_writable_person(db, user, person_id)
     row = db.query(models.ParentChild).filter_by(
         parent_id=parent_id, child_id=person_id
     ).first()
@@ -175,8 +183,9 @@ def add_spouse(
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    person = assert_owns_person(db, user, person_id)
-    assert_owns_person(db, user, link.spouse_id)
+    # Must be able to write at least one side of the union; spouse must be visible.
+    person = get_writable_person(db, user, person_id)
+    get_visible_person(db, user, link.spouse_id)
     if person_id == link.spouse_id:
         raise HTTPException(400, "A person cannot be their own spouse")
 
@@ -187,7 +196,7 @@ def add_spouse(
 
     db.add(models.Union(partner_a_id=a, partner_b_id=b))
     db.commit()
-    return _to_out(db, person)
+    return _to_out(db, person, user)
 
 
 @router.delete("/{person_id}/spouses/{spouse_id}", status_code=204)
@@ -196,7 +205,7 @@ def remove_spouse(
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    assert_owns_person(db, user, person_id)
+    get_writable_person(db, user, person_id)
     a, b = sorted([person_id, spouse_id])
     row = db.query(models.Union).filter_by(partner_a_id=a, partner_b_id=b).first()
     if not row:

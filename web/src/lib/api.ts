@@ -29,6 +29,8 @@ export interface Person {
   parent_ids: number[];
   children_ids: number[];
   spouse_ids: number[];
+  owner_id: number | null;
+  can_edit: boolean;
 }
 
 export interface PersonCreate {

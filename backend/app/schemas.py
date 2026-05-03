@@ -60,6 +60,8 @@ class PersonOut(PersonBase):
     parent_ids: List[int] = []
     children_ids: List[int] = []
     spouse_ids: List[int] = []
+    owner_id: Optional[int] = None
+    can_edit: bool = False
 
     class Config:
         from_attributes = True

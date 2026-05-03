@@ -75,6 +75,28 @@ export default function EditPersonPage({
   if (isLoading || !person)
     return <p className="text-stone-500">Loading…</p>;
 
+  if (!person.can_edit) {
+    return (
+      <section className="max-w-2xl">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-6">
+          <h1 className="text-lg font-semibold text-amber-900">
+            Read-only entry
+          </h1>
+          <p className="mt-2 text-sm text-amber-800">
+            <strong>{person.name}</strong> belongs to another user. You can
+            view it but only the owner (or an admin) can modify it.
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            className="mt-4 rounded-md border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
+          >
+            ← Back to people
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   const others = people.filter((p) => p.id !== personId);
   const availableParents = others.filter(
     (p) => !person.parent_ids.includes(p.id),
