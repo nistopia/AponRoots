@@ -202,104 +202,164 @@ def build_relationship_path(db: Session, a: int, b: int, lca: int) -> List[int]:
     return up + list(reversed(down))[1:]  # skip duplicated LCA
 
 
-# ---------- In-law detection ----------
+# ---------- In-law detection (unified BFS over blood relatives) ----------
+
+def _flip_edge(e: str) -> str:
+    if e == "parent":
+        return "child"
+    if e == "child":
+        return "parent"
+    return e
+
+
+def _bfs_blood(db: Session, start: int, max_depth: int = 12):
+    """BFS through parent + child links. Returns {pid: (path_from_start, edges)}."""
+    visited: Dict[int, Tuple[List[int], List[str]]] = {start: ([start], [])}
+    queue = deque([start])
+    while queue:
+        cur = queue.popleft()
+        cur_path, cur_edges = visited[cur]
+        if len(cur_edges) >= max_depth:
+            continue
+        for p in get_parents(db, cur):
+            if p not in visited:
+                visited[p] = (cur_path + [p], cur_edges + ["parent"])
+                queue.append(p)
+        for c in get_children(db, cur):
+            if c not in visited:
+                visited[c] = (cur_path + [c], cur_edges + ["child"])
+                queue.append(c)
+    return visited
+
+
+def _label_for_blood_edges(edges: List[str], gender_b: Optional[str]) -> str:
+    """Re-use name_relationship by extracting up_count then down_count.
+    BFS-blood paths are always monotone (all parents then all children)."""
+    up = 0
+    while up < len(edges) and edges[up] == "parent":
+        up += 1
+    down = len(edges) - up
+    return name_relationship(up, down, gender_b)
+
+
+def _find_lca_in_blood(path: List[int], edges: List[str]) -> Optional[int]:
+    """The LCA in a monotone blood path is the node at the peak (right after
+    the last 'parent' edge, before the first 'child' edge)."""
+    up = 0
+    while up < len(edges) and edges[up] == "parent":
+        up += 1
+    if 0 <= up < len(path):
+        return path[up]
+    return None
+
+
+def _co_in_law_label(
+    a_to_x_edges: List[str], y_to_b_edges: List[str], gender_b: Optional[str]
+) -> str:
+    """Label for the 'co-in-law' case where neither X==A nor Y==B.
+    Most common in real life: each of A and B is an ancestor of the
+    married couple (parent, grandparent, ...). Special cultures have a
+    single word for this; English uses 'co-father-in-law' etc."""
+    a_all_down = all(e == "child" for e in a_to_x_edges) and len(a_to_x_edges) > 0
+    b_all_up = all(e == "parent" for e in y_to_b_edges) and len(y_to_b_edges) > 0
+
+    if a_all_down and b_all_up:
+        d_a = len(a_to_x_edges)
+        d_b = len(y_to_b_edges)
+        if d_a == 1 and d_b == 1:
+            if gender_b == "M":
+                return "co-father-in-law"
+            if gender_b == "F":
+                return "co-mother-in-law"
+            return "co-parent-in-law"
+        if d_a == d_b == 2:
+            return "co-grandparent-in-law"
+        if d_a == d_b:
+            return f"co-{'great-' * (d_a - 2)}grandparent-in-law"
+    return "in-law (via marriage)"
+
 
 def find_in_law(
     db: Session, a_id: int, b_id: int, gender_b: Optional[str]
 ):
+    """Unified in-law / co-in-law search.
+
+    Strategy: BFS the blood relatives of A and B; for every spouse-edge
+    that connects an A-relative X to a B-relative Y, build a candidate
+    path A -> ... -> X -[spouse]- Y -> ... -> B. Pick the shortest.
+
+    Cases produced (with 'via' label):
+      your-spouse      X = A, Y is in B's blood graph
+                       (e.g. spouse's father -> father-in-law)
+      their-spouse     Y = B, X is in A's blood graph
+                       (e.g. brother's wife -> sister-in-law)
+      co-in-law        Both X != A and Y != B
+                       (e.g. children-of-A married children-of-B
+                        -> co-father-in-law / 'samdhi')
+
+    Returns dict {label, lca_id, distance_a, distance_b, via, path,
+    path_edges} or None.
     """
-    Detects in-law relationships when A and B share no direct blood ancestor.
+    a_rel = _bfs_blood(db, a_id)
+    b_rel = _bfs_blood(db, b_id)
 
-    Two paths are tried:
-      Path 1: A's spouse S has a blood relation to B.
-              -> B is "A's <spouse's-relation-to-B>-in-law"
-      Path 2: A has a blood relation to B's spouse S'.
-              -> B married into A's family via S'.
-
-    Returns dict {label, lca_id, distance_a, distance_b, via, path, path_edges}
-    or None.
-
-    `path` is the full sequence of person ids from A to B.
-    `path_edges` is a list of "parent"/"child"/"spouse" labels with
-    len(path) - 1 entries that describe how each consecutive pair is linked.
-    """
     best: Optional[Tuple[int, dict]] = None
 
-    def _consider(payload: dict, total_dist: int):
-        nonlocal best
-        if best is None or total_dist < best[0]:
-            best = (total_dist, payload)
+    for x_id, (a_to_x_path, a_to_x_edges) in a_rel.items():
+        for y_id in get_spouses(db, x_id):
+            if y_id not in b_rel:
+                continue
+            # Direct-spouse case is handled by the calling endpoint
+            if x_id == a_id and y_id == b_id:
+                continue
 
-    # Path 1: A's spouse S, blood S -> B
-    for s_id in get_spouses(db, a_id):
-        s_anc = ancestors_with_depth(db, s_id)
-        b_anc = ancestors_with_depth(db, b_id)
-        lca = find_lca(s_anc, b_anc)
-        if not lca:
-            continue
-        lca_id, ds, dbg = lca
-        blood = name_relationship(ds, dbg, gender_b)
-        if blood == "self":
-            continue
-        # Path: a_id -> s_id -> ... up ... -> lca -> ... down ... -> b_id
-        s_to_lca = path_to_ancestor(db, s_id, lca_id)        # length ds+1
-        b_to_lca = path_to_ancestor(db, b_id, lca_id)        # length dbg+1
-        if not s_to_lca or not b_to_lca:
-            continue
-        full_path = [a_id] + s_to_lca + list(reversed(b_to_lca))[1:]
-        edges = (
-            ["spouse"]
-            + ["parent"] * ds
-            + ["child"] * dbg
-        )
-        _consider(
-            {
-                "label": f"{blood}-in-law",
-                "lca_id": lca_id,
-                "distance_a": ds,
-                "distance_b": dbg,
-                "via": "your-spouse",
-                "via_id": s_id,
-                "path": full_path,
-                "path_edges": edges,
-            },
-            ds + dbg + 1,
-        )
+            b_to_y_path, b_to_y_edges = b_rel[y_id]
+            y_to_b_path = list(reversed(b_to_y_path))
+            y_to_b_edges = [_flip_edge(e) for e in reversed(b_to_y_edges)]
 
-    # Path 2: B's spouse S', blood A -> S'
-    for sp_id in get_spouses(db, b_id):
-        a_anc = ancestors_with_depth(db, a_id)
-        sp_anc = ancestors_with_depth(db, sp_id)
-        lca = find_lca(a_anc, sp_anc)
-        if not lca:
-            continue
-        lca_id, da, dsp = lca
-        # Use B's gender for the "fictive" role label
-        blood = name_relationship(da, dsp, gender_b)
-        if blood == "self":
-            continue
-        a_to_lca = path_to_ancestor(db, a_id, lca_id)
-        sp_to_lca = path_to_ancestor(db, sp_id, lca_id)
-        if not a_to_lca or not sp_to_lca:
-            continue
-        full_path = a_to_lca + list(reversed(sp_to_lca))[1:] + [b_id]
-        edges = (
-            ["parent"] * da
-            + ["child"] * dsp
-            + ["spouse"]
-        )
-        _consider(
-            {
-                "label": f"{blood}-in-law",
-                "lca_id": lca_id,
-                "distance_a": da,
-                "distance_b": dsp,
-                "via": "their-spouse",
-                "via_id": sp_id,
-                "path": full_path,
-                "path_edges": edges,
-            },
-            da + dsp + 1,
-        )
+            full_path = a_to_x_path + [y_id] + y_to_b_path[1:]
+            full_edges = list(a_to_x_edges) + ["spouse"] + list(y_to_b_edges)
+            total = len(full_edges)
+
+            if best is not None and total >= best[0]:
+                continue
+
+            # Compute label & LCA depending on which case we hit
+            if x_id == a_id:
+                # Simple "your-spouse": X is trivially A; Y is A's spouse
+                base = _label_for_blood_edges(y_to_b_edges, gender_b)
+                if base in ("self", ""):
+                    continue
+                label = f"{base}-in-law"
+                lca_id = _find_lca_in_blood(y_to_b_path, y_to_b_edges)
+                via = "your-spouse"
+            elif y_id == b_id:
+                # Simple "their-spouse": Y trivially B; X is A's blood relative
+                # who happens to be married to B. Label uses the would-be
+                # role of B from A's perspective (gender_b).
+                base = _label_for_blood_edges(a_to_x_edges, gender_b)
+                if base in ("self", ""):
+                    continue
+                label = f"{base}-in-law"
+                lca_id = _find_lca_in_blood(a_to_x_path, a_to_x_edges)
+                via = "their-spouse"
+            else:
+                # Co-in-law: both A and B are upstream of a marriage
+                label = _co_in_law_label(a_to_x_edges, y_to_b_edges, gender_b)
+                lca_id = None
+                via = "co-in-law"
+
+            best = (
+                total,
+                {
+                    "label": label,
+                    "lca_id": lca_id,
+                    "distance_a": len(a_to_x_edges),
+                    "distance_b": len(y_to_b_edges),
+                    "via": via,
+                    "path": full_path,
+                    "path_edges": full_edges,
+                },
+            )
 
     return best[1] if best else None

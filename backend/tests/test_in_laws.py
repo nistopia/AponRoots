@@ -122,6 +122,27 @@ def test_spouse_label(auth_client):
     assert "spouse" in label.lower()
 
 
+def test_co_father_in_law(auth_client):
+    """A and B are 'co-fathers-in-law' (samdhi): their kids married each other."""
+    client, headers, _ = auth_client
+    shahnaz = make(client, headers, "Shahnaz", "F")
+    kamal = make(client, headers, "Kamal", "M")
+    nishat = make(client, headers, "Nishat", "M", [shahnaz])
+    esha = make(client, headers, "Esha", "F", [kamal])
+    link_spouse(client, headers, nishat, esha)
+
+    r = client.get(f"/relationships?a={shahnaz}&b={kamal}", headers=headers).json()
+    assert "co-father-in-law" in r["relationship"]
+    assert r["path"] == [shahnaz, nishat, esha, kamal]
+    assert r["path_edges"] == ["child", "spouse", "parent"]
+    assert r["via"] == "co-in-law"
+
+    # Reverse: Shahnaz from Kamal's perspective is co-mother-in-law
+    r2 = client.get(f"/relationships?a={kamal}&b={shahnaz}", headers=headers).json()
+    assert "co-mother-in-law" in r2["relationship"]
+    assert r2["path"] == [kamal, esha, nishat, shahnaz]
+
+
 def test_no_relationship_when_unrelated(auth_client):
     client, headers, _ = auth_client
     a = make(client, headers, "A", "M")

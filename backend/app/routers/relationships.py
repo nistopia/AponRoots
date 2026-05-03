@@ -71,14 +71,15 @@ def find_relationship(
     # 2) In-law via spouse links?
     in_law = find_in_law(db, a, b, person_b.gender)
     if in_law is not None:
-        lca_person = db.get(models.Person, in_law["lca_id"])
+        lca_id = in_law.get("lca_id")
+        lca_person = db.get(models.Person, lca_id) if lca_id else None
         return schemas.RelationshipResult(
             person_a_id=a,
             person_b_id=b,
             person_a_name=person_a.name,
             person_b_name=person_b.name,
             relationship=f"{person_b.name} is {person_a.name}'s {in_law['label']}",
-            common_ancestor_id=in_law["lca_id"],
+            common_ancestor_id=lca_id,
             common_ancestor_name=lca_person.name if lca_person else None,
             distance_a=in_law["distance_a"],
             distance_b=in_law["distance_b"],

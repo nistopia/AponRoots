@@ -123,6 +123,10 @@ function buildNarration(result: RelationshipResult): string {
     return `From ${a}, up ${fmtGen(distance_a)} to ${lca} (common ancestor), down ${fmtGen(distance_b)} to ${b}'s spouse, then to ${b}.`;
   }
 
+  if (via === "co-in-law" && distance_a !== null && distance_b !== null) {
+    return `${a}'s descendant married ${b}'s descendant — they are connected through that marriage.`;
+  }
+
   if (via === "spouse" || (path_edges.length === 1 && has("spouse"))) {
     return `${a} and ${b} are married.`;
   }
