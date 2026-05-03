@@ -1,13 +1,27 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, UniqueConstraint, CheckConstraint
+from sqlalchemy import Column, Integer, String, Date, DateTime, Boolean, ForeignKey, UniqueConstraint, CheckConstraint
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 from .database import Base
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, nullable=False, index=True)
+    password_hash = Column(String, nullable=True)  # NULL for OAuth-only users
+    name = Column(String, nullable=True)
+    is_admin = Column(Boolean, default=False, nullable=False)
+    google_sub = Column(String, unique=True, nullable=True, index=True)  # Google user id
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
 class Person(Base):
     __tablename__ = "persons"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String, nullable=False, index=True)
     gender = Column(String(1), nullable=True)  # 'M', 'F', 'X', or NULL
     birth_date = Column(Date, nullable=True)

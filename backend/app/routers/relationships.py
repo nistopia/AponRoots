@@ -3,22 +3,26 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..database import get_db
+from ..deps import get_current_user
 from ..relationship import (
     ancestors_with_depth,
     find_lca,
     name_relationship,
     build_relationship_path,
 )
+from ..scope import assert_owns_person
 
 router = APIRouter(prefix="/relationships", tags=["relationships"])
 
 
 @router.get("", response_model=schemas.RelationshipResult)
-def find_relationship(a: int, b: int, db: Session = Depends(get_db)):
-    person_a = db.get(models.Person, a)
-    person_b = db.get(models.Person, b)
-    if not person_a or not person_b:
-        raise HTTPException(404, "One or both persons not found")
+def find_relationship(
+    a: int, b: int,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    person_a = assert_owns_person(db, user, a)
+    person_b = assert_owns_person(db, user, b)
 
     if a == b:
         return schemas.RelationshipResult(

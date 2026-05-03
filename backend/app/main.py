@@ -2,14 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, engine
-from .routers import persons, relationships
+from .routers import auth, persons, relationships
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="AponRoots API",
     description="Family tree backend. Store only parent-child links; derive everything else.",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 app.add_middleware(
@@ -20,10 +20,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(persons.router)
 app.include_router(relationships.router)
 
 
 @app.get("/")
 def root():
-    return {"app": "AponRoots", "version": "0.1.0", "docs": "/docs"}
+    return {"app": "AponRoots", "version": "0.2.0", "docs": "/docs"}
