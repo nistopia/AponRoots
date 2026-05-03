@@ -3,43 +3,45 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { PersonAutocomplete } from "@/components/PersonAutocomplete";
 
 export default function RelationshipPage() {
-  const { data: people = [] } = useQuery({
-    queryKey: ["persons"],
-    queryFn: () => api.listPersons(),
-  });
+  const [aId, setAId] = useState<number | null>(null);
+  const [bId, setBId] = useState<number | null>(null);
 
-  const [aId, setAId] = useState<number | "">("");
-  const [bId, setBId] = useState<number | "">("");
-
-  const enabled = aId !== "" && bId !== "";
+  const enabled = aId !== null && bId !== null;
   const { data, isFetching, error, refetch } = useQuery({
     queryKey: ["relationship", aId, bId],
-    queryFn: () => api.findRelationship(Number(aId), Number(bId)),
+    queryFn: () => api.findRelationship(aId!, bId!),
     enabled,
+  });
+
+  // For looking up names in the path display.
+  const { data: allPeople = [] } = useQuery({
+    queryKey: ["persons", "all"],
+    queryFn: () => api.listPersons(false),
   });
 
   return (
     <section className="max-w-2xl">
       <h1 className="mb-6 text-2xl font-semibold">Find a relationship</h1>
       <p className="mb-6 text-stone-600">
-        Pick two people in your tree — AponRoots will compute exactly how
+        Type a name in each box — AponRoots will compute exactly how
         they&apos;re related.
       </p>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <PersonPicker
+        <PersonAutocomplete
           label="Person A"
           value={aId}
           onChange={setAId}
-          options={people}
+          excludeIds={bId !== null ? [bId] : []}
         />
-        <PersonPicker
+        <PersonAutocomplete
           label="Person B"
           value={bId}
           onChange={setBId}
-          options={people}
+          excludeIds={aId !== null ? [aId] : []}
         />
       </div>
 
@@ -79,46 +81,14 @@ export default function RelationshipPage() {
             <p className="mt-3 text-sm text-emerald-800">
               Path:{" "}
               {data.path
-                .map((id) => people.find((p) => p.id === id)?.name ?? `#${id}`)
+                .map(
+                  (id) => allPeople.find((p) => p.id === id)?.name ?? `#${id}`,
+                )
                 .join(" → ")}
             </p>
           )}
         </div>
       )}
     </section>
-  );
-}
-
-function PersonPicker({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: number | "";
-  onChange: (v: number | "") => void;
-  options: { id: number; name: string; gender: string | null }[];
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-medium text-stone-700">
-        {label}
-      </label>
-      <select
-        value={value}
-        onChange={(e) =>
-          onChange(e.target.value === "" ? "" : Number(e.target.value))
-        }
-        className="w-full rounded-md border border-stone-300 px-3 py-2 focus:border-emerald-500 focus:outline-none"
-      >
-        <option value="">Select a person…</option>
-        {options.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name} {p.gender ? `(${p.gender})` : ""}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 }
