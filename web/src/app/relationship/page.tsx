@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { PersonAutocomplete } from "@/components/PersonAutocomplete";
+import { RelationshipPath } from "@/components/RelationshipPath";
 
 export default function RelationshipPage() {
   const [aId, setAId] = useState<number | null>(null);
@@ -16,18 +17,21 @@ export default function RelationshipPage() {
     enabled,
   });
 
-  // For looking up names in the path display.
   const { data: allPeople = [] } = useQuery({
     queryKey: ["persons", "all"],
     queryFn: () => api.listPersons(false),
   });
+  const byId = useMemo(
+    () => new Map(allPeople.map((p) => [p.id, p])),
+    [allPeople],
+  );
 
   return (
     <section className="max-w-2xl">
       <h1 className="mb-6 text-2xl font-semibold">Find a relationship</h1>
       <p className="mb-6 text-stone-600">
         Type a name in each box — AponRoots will compute exactly how
-        they&apos;re related.
+        they&apos;re related and show the path between them.
       </p>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -60,34 +64,25 @@ export default function RelationshipPage() {
       )}
 
       {data && enabled && (
-        <div className="mt-8 rounded-lg border border-emerald-200 bg-emerald-50 p-6">
-          <p className="text-2xl font-semibold text-emerald-900">
-            {data.relationship}
-          </p>
-          {data.common_ancestor_name && (
-            <p className="mt-2 text-sm text-emerald-800">
-              Common ancestor:{" "}
-              <span className="font-medium">{data.common_ancestor_name}</span>
-              {data.distance_a !== null && data.distance_b !== null && (
-                <>
-                  {" "}
-                  · {data.person_a_name} is {data.distance_a} generation(s)
-                  away · {data.person_b_name} is {data.distance_b}
-                </>
-              )}
+        <>
+          <div className="mt-8 rounded-lg border border-emerald-200 bg-emerald-50 p-6">
+            <p className="text-2xl font-semibold text-emerald-900">
+              {data.relationship}
             </p>
+            {data.common_ancestor_name && (
+              <p className="mt-2 text-sm text-emerald-800">
+                Common ancestor:{" "}
+                <span className="font-medium">
+                  {data.common_ancestor_name}
+                </span>
+              </p>
+            )}
+          </div>
+
+          {data.path && data.path.length >= 2 && (
+            <RelationshipPath result={data} byId={byId} />
           )}
-          {data.path.length > 0 && (
-            <p className="mt-3 text-sm text-emerald-800">
-              Path:{" "}
-              {data.path
-                .map(
-                  (id) => allPeople.find((p) => p.id === id)?.name ?? `#${id}`,
-                )
-                .join(" → ")}
-            </p>
-          )}
-        </div>
+        </>
       )}
     </section>
   );
