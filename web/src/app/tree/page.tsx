@@ -16,26 +16,14 @@ interface TreeNode {
   attributes?: {
     type?: NodeType;
     gender?: string;
+    personId?: string;
     spouseName?: string;
     spouseGender?: string;
+    spouseId?: string;
   };
   children?: TreeNode[];
 }
 
-/**
- * Tree builder that correctly handles multiple spouses.
- *
- *   - "person":          a single person (no spouse, no merging)
- *   - "couple":          P + one spouse drawn side-by-side; their joint
- *                        children hang directly below
- *   - "marriage_branch": when P has 2+ spouses, the second / third / ...
- *                        marriages are represented as branches under P.
- *                        The branch shows the OTHER spouse with a heart,
- *                        and the children of that specific marriage below.
- *
- * Children are grouped by their other biological parent. So a child only
- * ever appears once, attached to the marriage that produced them.
- */
 function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
   const rendered = new Set<number>();
 
@@ -57,7 +45,6 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
       arr.push(cid);
       byOtherParent.set(otherSpouse, arr);
     }
-    // Make sure every spouse has an entry, even childless marriages
     for (const sid of p.spouse_ids) {
       if (!byOtherParent.has(sid)) byOtherParent.set(sid, []);
     }
@@ -67,12 +54,10 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
     ) as [number, number[]][];
     const soloKids = byOtherParent.get(null) ?? [];
 
-    // No spouses, no children
     if (marriages.length === 0 && soloKids.length === 0) {
       return basicPersonNode(p);
     }
 
-    // Single marriage and no children outside it → classic combined couple
     if (marriages.length === 1 && soloKids.length === 0) {
       const [spouseId, kidIds] = marriages[0];
       const spouse = byId.get(spouseId);
@@ -85,14 +70,15 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
         attributes: {
           type: "couple",
           gender: p.gender ?? "",
+          personId: String(p.id),
           spouseName: spouse?.name ?? "",
           spouseGender: spouse?.gender ?? "",
+          spouseId: spouse ? String(spouse.id) : "",
         },
         children: kids.length > 0 ? kids : undefined,
       };
     }
 
-    // No marriages, just solo children
     if (marriages.length === 0) {
       const kids = soloKids
         .map(walk)
@@ -103,11 +89,9 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
       };
     }
 
-    // Multiple marriages (or marriage + solo kids).
-    // Render P alone, then for each marriage create a marriage_branch node.
+    // Multiple marriages (or marriage + solo kids)
     const branches: TreeNode[] = [];
 
-    // Solo kids first
     for (const cid of soloKids) {
       const n = walk(cid);
       if (n) branches.push(n);
@@ -125,6 +109,7 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
         attributes: {
           type: "marriage_branch",
           gender: spouse.gender ?? "",
+          personId: String(spouse.id),
         },
         children: kids.length > 0 ? kids : undefined,
       });
@@ -132,7 +117,11 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
 
     return {
       name: p.name,
-      attributes: { type: "person", gender: p.gender ?? "" },
+      attributes: {
+        type: "person",
+        gender: p.gender ?? "",
+        personId: String(p.id),
+      },
       children: branches,
     };
   };
@@ -143,14 +132,18 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
 function basicPersonNode(p: Person): TreeNode {
   return {
     name: p.name,
-    attributes: { type: "person", gender: p.gender ?? "" },
+    attributes: {
+      type: "person",
+      gender: p.gender ?? "",
+      personId: String(p.id),
+    },
   };
 }
 
-function colorFor(gender: string | undefined): string {
-  if (gender === "F") return "#db2777";
-  if (gender === "M") return "#1d4ed8";
-  return "#047857";
+function emojiFor(gender: string | undefined | null): string {
+  if (gender === "F") return "👩";
+  if (gender === "M") return "👨";
+  return "🧑";
 }
 
 const PERSON_GAP = 110;
@@ -208,6 +201,10 @@ export default function TreePage() {
         />
       </div>
 
+      <p className="mb-2 text-xs text-stone-500">
+        💡 Click any person in the tree to make them the new root.
+      </p>
+
       <div
         id="tree-container"
         className="rounded-lg border border-stone-200 bg-white"
@@ -224,22 +221,31 @@ export default function TreePage() {
             nodeSize={{ x: 260, y: 130 }}
             renderCustomNodeElement={({ nodeDatum }) => {
               const type = (nodeDatum.attributes?.type ?? "person") as NodeType;
-              const gender = nodeDatum.attributes?.gender as
+              const gender = nodeDatum.attributes?.gender as string | undefined;
+              const personIdStr = nodeDatum.attributes?.personId as
                 | string
                 | undefined;
-              const fill = colorFor(gender);
+              const personId = personIdStr ? parseInt(personIdStr, 10) : null;
 
-              // Couple: primary + one spouse, side by side with heart link
+              const handleClick = (id: number | null) => () => {
+                if (id !== null) setRootId(id);
+              };
+
               if (type === "couple") {
                 const spouseName = (nodeDatum.attributes?.spouseName ??
                   "") as string;
                 const spouseGender = nodeDatum.attributes?.spouseGender as
                   | string
                   | undefined;
-                const sFill = colorFor(spouseGender);
+                const spouseIdStr = nodeDatum.attributes?.spouseId as
+                  | string
+                  | undefined;
+                const spouseId = spouseIdStr
+                  ? parseInt(spouseIdStr, 10)
+                  : null;
                 return (
                   <g>
-                    {personGlyph(0, fill, nodeDatum.name)}
+                    {personGlyph(0, gender, nodeDatum.name, handleClick(personId))}
                     <line
                       x1={22}
                       y1={0}
@@ -258,14 +264,16 @@ export default function TreePage() {
                     >
                       ♥
                     </text>
-                    {personGlyph(PERSON_GAP, sFill, spouseName)}
+                    {personGlyph(
+                      PERSON_GAP,
+                      spouseGender,
+                      spouseName,
+                      handleClick(spouseId),
+                    )}
                   </g>
                 );
               }
 
-              // Marriage branch: spouse-only node, the heart link to P is
-              // implied by the tree edge above. We keep a small ♥ above
-              // the circle to signal it's a marriage, not a child.
               if (type === "marriage_branch") {
                 return (
                   <g>
@@ -287,34 +295,56 @@ export default function TreePage() {
                     >
                       also married
                     </text>
-                    {personGlyph(0, fill, nodeDatum.name)}
+                    {personGlyph(0, gender, nodeDatum.name, handleClick(personId))}
                   </g>
                 );
               }
 
-              // Plain person
-              return personGlyph(0, fill, nodeDatum.name);
+              return personGlyph(0, gender, nodeDatum.name, handleClick(personId));
             }}
           />
         )}
       </div>
 
       <p className="mt-3 text-xs text-stone-500">
-        👨 Male · 👩 Female · 🟢 Other / unset · ♥ link = spouse · &ldquo;also
+        👨 Male · 👩 Female · 🧑 Other / unset · ♥ link = spouse · &ldquo;also
         married&rdquo; = additional marriage of the parent above
       </p>
     </section>
   );
 }
 
-/** Renders a circle + name. Returns an SVG group fragment. */
-function personGlyph(x: number, fill: string, name: string) {
+/** Renders a person as an emoji + name. Returns a clickable SVG group. */
+function personGlyph(
+  x: number,
+  gender: string | undefined | null,
+  name: string,
+  onClick: () => void,
+) {
   return (
-    <g transform={`translate(${x}, 0)`}>
-      <circle r={20} cx={0} cy={0} fill={fill} stroke="#ffffff" strokeWidth={3} />
+    <g
+      transform={`translate(${x}, 0)`}
+      onClick={onClick}
+      style={{ cursor: "pointer" }}
+    >
+      {/* Invisible larger hit area so text is easy to click */}
+      <circle r={28} cx={0} cy={0} fill="transparent" />
       <text
         x={0}
-        y={42}
+        y={10}
+        textAnchor="middle"
+        fontSize={36}
+        style={{
+          fontFamily:
+            '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+          userSelect: "none",
+        }}
+      >
+        {emojiFor(gender)}
+      </text>
+      <text
+        x={0}
+        y={48}
         textAnchor="middle"
         fontSize={14}
         fontWeight={700}
@@ -322,7 +352,10 @@ function personGlyph(x: number, fill: string, name: string) {
         strokeWidth={4}
         paintOrder="stroke"
         fill="#0f172a"
-        style={{ fontFamily: "system-ui, sans-serif" }}
+        style={{
+          fontFamily: "system-ui, sans-serif",
+          userSelect: "none",
+        }}
       >
         {name}
       </text>
