@@ -2,21 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, type Gender } from "@/lib/api";
+import { PersonAutocomplete } from "@/components/PersonAutocomplete";
 
 export default function AddPersonPage() {
   const router = useRouter();
   const qc = useQueryClient();
-  const { data: people = [] } = useQuery({
-    queryKey: ["persons"],
-    queryFn: () => api.listPersons(),
-  });
 
   const [name, setName] = useState("");
   const [gender, setGender] = useState<Gender | "">("");
   const [birthDate, setBirthDate] = useState("");
-  const [parentIds, setParentIds] = useState<number[]>([]);
+  const [parent1, setParent1] = useState<number | null>(null);
+  const [parent2, setParent2] = useState<number | null>(null);
 
   const create = useMutation({
     mutationFn: api.createPerson,
@@ -26,23 +24,16 @@ export default function AddPersonPage() {
     },
   });
 
-  const toggleParent = (id: number) => {
-    setParentIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((p) => p !== id)
-        : prev.length >= 2
-        ? prev
-        : [...prev, id],
-    );
-  };
-
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const parent_ids = [parent1, parent2].filter(
+      (id): id is number => id !== null,
+    );
     create.mutate({
       name: name.trim(),
       gender: gender || null,
       birth_date: birthDate || null,
-      parent_ids: parentIds,
+      parent_ids,
     });
   };
 
@@ -57,7 +48,7 @@ export default function AddPersonPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-md border border-stone-300 px-3 py-2 focus:border-emerald-500 focus:outline-none"
+            className={inputCls}
             placeholder="e.g. Alice Johnson"
           />
         </Field>
@@ -66,7 +57,7 @@ export default function AddPersonPage() {
           <select
             value={gender}
             onChange={(e) => setGender(e.target.value as Gender | "")}
-            className="w-full rounded-md border border-stone-300 px-3 py-2 focus:border-emerald-500 focus:outline-none"
+            className={inputCls}
           >
             <option value="">Prefer not to say</option>
             <option value="F">Female</option>
@@ -80,47 +71,29 @@ export default function AddPersonPage() {
             type="date"
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
-            className="w-full rounded-md border border-stone-300 px-3 py-2 focus:border-emerald-500 focus:outline-none"
+            className={inputCls}
           />
         </Field>
 
-        <Field label={`Parents (pick up to 2) — ${parentIds.length}/2 selected`}>
-          {people.length === 0 ? (
-            <p className="rounded-md bg-stone-100 px-3 py-2 text-sm text-stone-500">
-              No existing people yet — this person will be a root.
-            </p>
-          ) : (
-            <div className="max-h-60 space-y-1 overflow-y-auto rounded-md border border-stone-200 p-2">
-              {people.map((p) => {
-                const checked = parentIds.includes(p.id);
-                const disabled = !checked && parentIds.length >= 2;
-                return (
-                  <label
-                    key={p.id}
-                    className={`flex items-center gap-2 rounded px-2 py-1 ${
-                      disabled
-                        ? "opacity-40"
-                        : "cursor-pointer hover:bg-stone-50"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={disabled}
-                      onChange={() => toggleParent(p.id)}
-                    />
-                    <span>
-                      {p.name}{" "}
-                      <span className="text-xs text-stone-500">
-                        {p.gender ? `(${p.gender})` : ""}
-                      </span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          )}
-        </Field>
+        <div className="space-y-3 rounded-lg border border-stone-200 bg-white p-4">
+          <h2 className="text-sm font-semibold text-stone-700">
+            Parents (optional)
+          </h2>
+          <PersonAutocomplete
+            label="Parent 1"
+            value={parent1}
+            onChange={setParent1}
+            excludeIds={parent2 !== null ? [parent2] : []}
+            placeholder="Search by name…"
+          />
+          <PersonAutocomplete
+            label="Parent 2"
+            value={parent2}
+            onChange={setParent2}
+            excludeIds={parent1 !== null ? [parent1] : []}
+            placeholder="Search by name…"
+          />
+        </div>
 
         {create.error && (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -165,3 +138,6 @@ function Field({
     </div>
   );
 }
+
+const inputCls =
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 focus:border-emerald-500 focus:outline-none";

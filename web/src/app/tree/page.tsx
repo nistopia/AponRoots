@@ -1,9 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Person } from "@/lib/api";
+import { PersonAutocomplete } from "@/components/PersonAutocomplete";
 
 // react-d3-tree is client-only and uses window — load dynamically.
 const Tree = dynamic(() => import("react-d3-tree"), { ssr: false });
@@ -31,8 +32,8 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode {
 
 export default function TreePage() {
   const { data: people = [], isLoading } = useQuery({
-    queryKey: ["persons"],
-    queryFn: () => api.listPersons(),
+    queryKey: ["persons", "all"],
+    queryFn: () => api.listPersons(false),
   });
 
   const byId = useMemo(() => new Map(people.map((p) => [p.id, p])), [people]);
@@ -41,9 +42,14 @@ export default function TreePage() {
     [people],
   );
 
-  const [rootId, setRootId] = useState<number | "">("");
-  const effectiveRoot: number | undefined =
-    rootId === "" ? roots[0]?.id : rootId;
+  const [rootId, setRootId] = useState<number | null>(null);
+
+  // Default to the first natural root (oldest ancestor with no parents).
+  useEffect(() => {
+    if (rootId === null && roots.length > 0) {
+      setRootId(roots[0].id);
+    }
+  }, [rootId, roots]);
 
   if (isLoading) return <p className="text-stone-500">Loading…</p>;
   if (people.length === 0)
@@ -57,30 +63,25 @@ export default function TreePage() {
       </p>
     );
 
-  const tree =
-    effectiveRoot !== undefined ? buildTree(effectiveRoot, byId) : null;
+  const tree = rootId !== null ? buildTree(rootId, byId) : null;
 
   return (
     <section>
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-end gap-3">
         <h1 className="text-2xl font-semibold">Family tree</h1>
-        <select
-          value={rootId}
-          onChange={(e) =>
-            setRootId(e.target.value === "" ? "" : Number(e.target.value))
-          }
-          className="rounded-md border border-stone-300 px-3 py-1.5 text-sm"
-        >
-          {roots.map((r) => (
-            <option key={r.id} value={r.id}>
-              Root: {r.name}
-            </option>
-          ))}
-        </select>
         <span className="text-sm text-stone-500">
           {roots.length} root{roots.length === 1 ? "" : "s"} ·{" "}
           {people.length} people
         </span>
+      </div>
+
+      <div className="mb-4 max-w-sm">
+        <PersonAutocomplete
+          label="Show tree rooted at…"
+          value={rootId}
+          onChange={setRootId}
+          placeholder="Pick anyone — see them and their descendants"
+        />
       </div>
 
       <div
@@ -100,11 +101,14 @@ export default function TreePage() {
             renderCustomNodeElement={({ nodeDatum }) => {
               const gender = nodeDatum.attributes?.gender;
               const fill =
-                gender === "F" ? "#db2777" : gender === "M" ? "#1d4ed8" : "#047857";
+                gender === "F"
+                  ? "#db2777"
+                  : gender === "M"
+                  ? "#1d4ed8"
+                  : "#047857";
               return (
                 <g>
                   <circle r={20} fill={fill} stroke="#ffffff" strokeWidth={3} />
-                  {/* white halo behind the text for readability on any bg */}
                   <text
                     x={28}
                     y={6}

@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Gender, type Person } from "@/lib/api";
+import { PersonAutocomplete } from "@/components/PersonAutocomplete";
 
 export default function EditPersonPage({
   params,
@@ -98,12 +99,8 @@ export default function EditPersonPage({
   }
 
   const others = people.filter((p) => p.id !== personId);
-  const availableParents = others.filter(
-    (p) => !person.parent_ids.includes(p.id),
-  );
-  const availableSpouses = others.filter(
-    (p) => !person.spouse_ids.includes(p.id),
-  );
+  const parentExcludes = [personId, ...person.parent_ids];
+  const spouseExcludes = [personId, ...person.spouse_ids];
 
   return (
     <section className="max-w-2xl">
@@ -194,7 +191,7 @@ export default function EditPersonPage({
         title="Parents"
         items={person.parent_ids}
         people={people}
-        available={availableParents}
+        excludeIds={parentExcludes}
         max={2}
         onAdd={(id) => addParent.mutate(id)}
         onRemove={(id) => removeParent.mutate(id)}
@@ -206,7 +203,7 @@ export default function EditPersonPage({
         title="Spouses / partners"
         items={person.spouse_ids}
         people={people}
-        available={availableSpouses}
+        excludeIds={spouseExcludes}
         onAdd={(id) => addSpouse.mutate(id)}
         onRemove={(id) => removeSpouse.mutate(id)}
         addError={addSpouse.error as Error | null}
@@ -219,7 +216,7 @@ function RelationshipSection({
   title,
   items,
   people,
-  available,
+  excludeIds,
   max,
   onAdd,
   onRemove,
@@ -228,13 +225,13 @@ function RelationshipSection({
   title: string;
   items: number[];
   people: Person[];
-  available: Person[];
+  excludeIds: number[];
   max?: number;
   onAdd: (id: number) => void;
   onRemove: (id: number) => void;
   addError: Error | null;
 }) {
-  const [pick, setPick] = useState<number | "">("");
+  const [pick, setPick] = useState<number | null>(null);
   const atLimit = max !== undefined && items.length >= max;
 
   return (
@@ -271,30 +268,25 @@ function RelationshipSection({
         </ul>
       )}
 
-      {!atLimit && available.length > 0 && (
-        <div className="mt-4 flex gap-2">
-          <select
-            value={pick}
-            onChange={(e) =>
-              setPick(e.target.value === "" ? "" : Number(e.target.value))
-            }
-            className={`${inputCls} flex-1`}
-          >
-            <option value="">Add someone…</option>
-            {available.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} {p.gender ? `(${p.gender})` : ""}
-              </option>
-            ))}
-          </select>
+      {!atLimit && (
+        <div className="mt-4 flex items-end gap-2">
+          <div className="flex-1">
+            <PersonAutocomplete
+              label="Add a person"
+              value={pick}
+              onChange={setPick}
+              excludeIds={excludeIds}
+            />
+          </div>
           <button
+            type="button"
             onClick={() => {
-              if (pick !== "") {
+              if (pick !== null) {
                 onAdd(pick);
-                setPick("");
+                setPick(null);
               }
             }}
-            disabled={pick === ""}
+            disabled={pick === null}
             className={primaryBtn}
           >
             Add
