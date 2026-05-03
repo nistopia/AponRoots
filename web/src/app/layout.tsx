@@ -12,7 +12,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ colorScheme: "light" }}>
       <body className="min-h-screen bg-stone-50 text-stone-900 antialiased">
         <Providers>
           <header className="border-b border-stone-200 bg-white">
