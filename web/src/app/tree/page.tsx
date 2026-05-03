@@ -181,6 +181,11 @@ export default function TreePage() {
     );
 
   const tree = rootId !== null ? buildTree(rootId, byId) : null;
+  const rootPerson = rootId !== null ? byId.get(rootId) : null;
+  const parents =
+    rootPerson?.parent_ids
+      .map((pid) => byId.get(pid))
+      .filter((p): p is Person => !!p) ?? [];
 
   return (
     <section>
@@ -200,6 +205,24 @@ export default function TreePage() {
           placeholder="Pick anyone — see them and their descendants"
         />
       </div>
+
+      {parents.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-stone-600">↑ Show parents of {rootPerson?.name}:</span>
+          {parents.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setRootId(p.id)}
+              className="inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white px-3 py-1 text-sm text-stone-800 shadow-sm hover:border-emerald-500 hover:bg-emerald-50"
+            >
+              <span aria-hidden>
+                {p.gender === "F" ? "👩" : p.gender === "M" ? "👨" : "🧑"}
+              </span>
+              {p.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <p className="mb-2 text-xs text-stone-500">
         💡 Click any person in the tree to make them the new root.
