@@ -4,6 +4,19 @@
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+const TOKEN_KEY = "aponroots_token";
+
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string | null): void {
+  if (typeof window === "undefined") return;
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  else localStorage.removeItem(TOKEN_KEY);
+}
+
 export type Gender = "M" | "F" | "X";
 
 export interface Person {
@@ -40,23 +53,60 @@ export interface RelationshipResult {
   path: number[];
 }
 
+export interface User {
+  id: number;
+  email: string;
+  name: string | null;
+  is_admin: boolean;
+  created_at: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...((init?.headers as Record<string, string>) ?? {}),
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_URL}${path}`, { ...init, headers });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`API ${res.status}: ${text}`);
+    throw new ApiError(`API ${res.status}: ${text}`, res.status);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
 }
 
 export const api = {
+  // Auth
+  signup: (email: string, password: string, name?: string) =>
+    request<AuthResponse>("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify({ email, password, name }),
+    }),
+  login: (email: string, password: string) =>
+    request<AuthResponse>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  me: () => request<User>("/auth/me"),
+
+  // People
   listPersons: () => request<Person[]>("/persons"),
   getPerson: (id: number) => request<Person>(`/persons/${id}`),
   createPerson: (payload: PersonCreate) =>
@@ -96,3 +146,4 @@ export const api = {
   findRelationship: (a: number, b: number) =>
     request<RelationshipResult>(`/relationships?a=${a}&b=${b}`),
 };
+
