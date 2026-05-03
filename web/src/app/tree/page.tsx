@@ -9,26 +9,75 @@ import { PersonAutocomplete } from "@/components/PersonAutocomplete";
 // react-d3-tree is client-only and uses window — load dynamically.
 const Tree = dynamic(() => import("react-d3-tree"), { ssr: false });
 
+interface SpouseInfo {
+  n: string; // name
+  g: string; // gender ('M' | 'F' | 'X' | '')
+}
+
 interface TreeNode {
   name: string;
-  attributes?: Record<string, string>;
+  attributes?: {
+    gender?: string;
+    spouses?: string; // JSON-encoded SpouseInfo[]
+  };
   children?: TreeNode[];
 }
 
+/**
+ * Build a tree where each rendered node is a "couple" (person + their spouses).
+ * Children = union of children_ids across the couple, deduplicated.
+ * Spouses are marked rendered so they don't appear as separate subtrees.
+ */
 function buildTree(rootId: number, byId: Map<number, Person>): TreeNode {
-  const seen = new Set<number>();
-  const walk = (id: number): TreeNode => {
+  const rendered = new Set<number>();
+
+  const walk = (id: number): TreeNode | null => {
     const p = byId.get(id);
-    if (!p || seen.has(id)) return { name: p?.name ?? `#${id}` };
-    seen.add(id);
+    if (!p || rendered.has(id)) return null;
+    rendered.add(id);
+
+    const spouses: Person[] = p.spouse_ids
+      .map((sid) => byId.get(sid))
+      .filter((s): s is Person => !!s);
+    spouses.forEach((s) => rendered.add(s.id));
+
+    // Children of either side of the union
+    const childIds = Array.from(
+      new Set<number>([
+        ...p.children_ids,
+        ...spouses.flatMap((s) => s.children_ids),
+      ]),
+    );
+
+    const children = childIds
+      .map(walk)
+      .filter((c): c is TreeNode => c !== null);
+
+    const spouseInfo: SpouseInfo[] = spouses.map((s) => ({
+      n: s.name,
+      g: s.gender ?? "",
+    }));
+
     return {
       name: p.name,
-      attributes: p.gender ? { gender: p.gender } : undefined,
-      children: p.children_ids.map(walk),
+      attributes: {
+        gender: p.gender ?? "",
+        spouses: JSON.stringify(spouseInfo),
+      },
+      children: children.length > 0 ? children : undefined,
     };
   };
-  return walk(rootId);
+
+  return walk(rootId)!;
 }
+
+function colorFor(gender: string | undefined): string {
+  if (gender === "F") return "#db2777";
+  if (gender === "M") return "#1d4ed8";
+  return "#047857";
+}
+
+const PERSON_GAP = 110; // horizontal distance between members of a couple
 
 export default function TreePage() {
   const { data: people = [], isLoading } = useQuery({
@@ -44,7 +93,6 @@ export default function TreePage() {
 
   const [rootId, setRootId] = useState<number | null>(null);
 
-  // Default to the first natural root (oldest ancestor with no parents).
   useEffect(() => {
     if (rootId === null && roots.length > 0) {
       setRootId(roots[0].id);
@@ -96,38 +144,111 @@ export default function TreePage() {
             collapsible={false}
             translate={{ x: 400, y: 60 }}
             pathFunc="step"
-            separation={{ siblings: 1.2, nonSiblings: 1.5 }}
-            nodeSize={{ x: 180, y: 100 }}
+            separation={{ siblings: 1.6, nonSiblings: 2 }}
+            nodeSize={{ x: 260, y: 130 }}
             renderCustomNodeElement={({ nodeDatum }) => {
-              const gender = nodeDatum.attributes?.gender;
-              const fill =
-                gender === "F"
-                  ? "#db2777"
-                  : gender === "M"
-                  ? "#1d4ed8"
-                  : "#047857";
+              const gender = nodeDatum.attributes?.gender as
+                | string
+                | undefined;
+              const spousesRaw = (nodeDatum.attributes?.spouses ??
+                "[]") as string;
+              let spouses: SpouseInfo[] = [];
+              try {
+                spouses = JSON.parse(spousesRaw);
+              } catch {
+                spouses = [];
+              }
+
+              const personFill = colorFor(gender);
+
               return (
                 <g>
-                  <circle r={20} fill={fill} stroke="#ffffff" strokeWidth={3} />
+                  {/* Primary person */}
+                  <circle
+                    r={20}
+                    cx={0}
+                    cy={0}
+                    fill={personFill}
+                    stroke="#ffffff"
+                    strokeWidth={3}
+                  />
                   <text
-                    x={28}
-                    y={6}
-                    fontSize={16}
+                    x={0}
+                    y={42}
+                    textAnchor="middle"
+                    fontSize={14}
                     fontWeight={700}
                     stroke="#ffffff"
-                    strokeWidth={5}
+                    strokeWidth={4}
                     paintOrder="stroke"
                     fill="#0f172a"
                     style={{ fontFamily: "system-ui, sans-serif" }}
                   >
                     {nodeDatum.name}
                   </text>
+
+                  {/* Spouses to the right, with heart link */}
+                  {spouses.map((s, i) => {
+                    const xOff = PERSON_GAP * (i + 1);
+                    const sFill = colorFor(s.g);
+                    return (
+                      <g
+                        key={`${s.n}-${i}`}
+                        transform={`translate(${xOff}, 0)`}
+                      >
+                        <line
+                          x1={-PERSON_GAP + 22}
+                          y1={0}
+                          x2={-22}
+                          y2={0}
+                          stroke="#9ca3af"
+                          strokeWidth={2}
+                          strokeDasharray="4,3"
+                        />
+                        <text
+                          x={-PERSON_GAP / 2}
+                          y={-6}
+                          textAnchor="middle"
+                          fontSize={16}
+                          fill="#dc2626"
+                        >
+                          ♥
+                        </text>
+                        <circle
+                          r={20}
+                          cx={0}
+                          cy={0}
+                          fill={sFill}
+                          stroke="#ffffff"
+                          strokeWidth={3}
+                        />
+                        <text
+                          x={0}
+                          y={42}
+                          textAnchor="middle"
+                          fontSize={14}
+                          fontWeight={700}
+                          stroke="#ffffff"
+                          strokeWidth={4}
+                          paintOrder="stroke"
+                          fill="#0f172a"
+                          style={{ fontFamily: "system-ui, sans-serif" }}
+                        >
+                          {s.n}
+                        </text>
+                      </g>
+                    );
+                  })}
                 </g>
               );
             }}
           />
         )}
       </div>
+
+      <p className="mt-3 text-xs text-stone-500">
+        🔵 Male · 🩷 Female · 🟢 Other / unset · ♥ link = spouse
+      </p>
     </section>
   );
 }
