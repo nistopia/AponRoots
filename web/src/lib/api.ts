@@ -109,7 +109,8 @@ export const api = {
   me: () => request<User>("/auth/me"),
 
   // People
-  listPersons: () => request<Person[]>("/persons"),
+  listPersons: (mine = false) =>
+    request<Person[]>(`/persons${mine ? "?mine=true" : ""}`),
   getPerson: (id: number) => request<Person>(`/persons/${id}`),
   createPerson: (payload: PersonCreate) =>
     request<Person>("/persons", {

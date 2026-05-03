@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 export default function RelationshipPage() {
   const { data: people = [] } = useQuery({
     queryKey: ["persons"],
-    queryFn: api.listPersons,
+    queryFn: () => api.listPersons(),
   });
 
   const [aId, setAId] = useState<number | "">("");

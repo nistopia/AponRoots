@@ -7,9 +7,17 @@ import { api, type Person } from "@/lib/api";
 
 export default function PeoplePage() {
   const qc = useQueryClient();
+
+  // Home shows only the logged-in user's own entries.
   const { data, isLoading, error } = useQuery({
-    queryKey: ["persons"],
-    queryFn: api.listPersons,
+    queryKey: ["persons", "mine"],
+    queryFn: () => api.listPersons(true),
+  });
+  // We still need the full directory so we can render names of related
+  // people who may belong to other users (parents, spouses, children).
+  const { data: allPeople = [] } = useQuery({
+    queryKey: ["persons", "all"],
+    queryFn: () => api.listPersons(false),
   });
 
   const del = useMutation({
@@ -24,7 +32,10 @@ export default function PeoplePage() {
     if (!q) return people;
     return people.filter((p) => p.name.toLowerCase().includes(q));
   }, [people, filter]);
-  const byId = useMemo(() => new Map(people.map((p) => [p.id, p])), [people]);
+  const byId = useMemo(
+    () => new Map(allPeople.map((p) => [p.id, p])),
+    [allPeople],
+  );
 
   if (isLoading) return <p className="text-stone-500">Loading…</p>;
   if (error)
@@ -43,7 +54,7 @@ export default function PeoplePage() {
     <section>
       <div className="mb-4 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-stone-900">
-          People in your tree
+          My family tree
         </h1>
         <Link
           href="/add"
@@ -173,7 +184,9 @@ function Detail({
 function EmptyState() {
   return (
     <div className="rounded-lg border border-dashed border-stone-300 bg-white p-12 text-center">
-      <p className="text-lg text-stone-600">Your family tree is empty.</p>
+      <p className="text-lg text-stone-600">
+        You haven&apos;t added anyone to your tree yet.
+      </p>
       <Link
         href="/add"
         className="mt-4 inline-block rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"

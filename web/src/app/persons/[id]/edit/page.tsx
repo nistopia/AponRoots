@@ -21,7 +21,7 @@ export default function EditPersonPage({
   });
   const { data: people = [] } = useQuery({
     queryKey: ["persons"],
-    queryFn: api.listPersons,
+    queryFn: () => api.listPersons(),
   });
 
   // Form state

@@ -10,7 +10,7 @@ export default function AddPersonPage() {
   const qc = useQueryClient();
   const { data: people = [] } = useQuery({
     queryKey: ["persons"],
-    queryFn: api.listPersons,
+    queryFn: () => api.listPersons(),
   });
 
   const [name, setName] = useState("");

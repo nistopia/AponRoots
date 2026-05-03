@@ -36,11 +36,13 @@ def _to_out(db: Session, person: models.Person, user: models.User) -> schemas.Pe
 
 @router.get("/search", response_model=List[schemas.PersonOut])
 def search_persons(
-    q: str = "", limit: int = 50,
+    q: str = "", limit: int = 50, mine: bool = False,
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    query = scope_persons_read(db.query(models.Person), user)
+    query = db.query(models.Person)
+    if mine:
+        query = query.filter(models.Person.user_id == user.id)
     if q.strip():
         query = query.filter(models.Person.name.ilike(f"%{q.strip()}%"))
     rows = query.order_by(models.Person.name).limit(limit).all()
@@ -80,14 +82,14 @@ def create_person(
 
 @router.get("", response_model=List[schemas.PersonOut])
 def list_persons(
+    mine: bool = False,
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    rows = (
-        scope_persons_read(db.query(models.Person), user)
-        .order_by(models.Person.id)
-        .all()
-    )
+    query = db.query(models.Person)
+    if mine:
+        query = query.filter(models.Person.user_id == user.id)
+    rows = query.order_by(models.Person.id).all()
     return [_to_out(db, p, user) for p in rows]
 
 

@@ -32,7 +32,7 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode {
 export default function TreePage() {
   const { data: people = [], isLoading } = useQuery({
     queryKey: ["persons"],
-    queryFn: api.listPersons,
+    queryFn: () => api.listPersons(),
   });
 
   const byId = useMemo(() => new Map(people.map((p) => [p.id, p])), [people]);
