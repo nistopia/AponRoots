@@ -2,13 +2,15 @@
 
 import type { Person, RelationshipResult } from "@/lib/api";
 
+type Edge = "parent" | "child" | "spouse";
+
 interface Step {
   id: number;
   name: string;
   gender: string | null;
   birthDate: string | null;
-  /** "up" = parent of previous; "down" = child of previous; "lca" = common ancestor; "start" = first node */
-  arrowFromPrev: "up" | "down" | null;
+  /** edge from PREVIOUS node in the path to this one */
+  edgeFromPrev: Edge | null;
   isLCA: boolean;
 }
 
@@ -20,13 +22,13 @@ function colorFor(gender: string | null): string {
 
 /**
  * Renders both a textual narration and a vertical ladder of the path
- * between two people, with up/down arrows annotating each step.
+ * between two people, with arrows annotating each step:
+ *   ↑ parent  – next person is the parent of the previous
+ *   ↓ child   – next person is the child of the previous
+ *   ♥ spouse  – next person is the spouse of the previous
  *
- * Path semantics (from the backend):
- *   First (distance_a) edges go UP from A to the LCA
- *     → each next node is the parent of the previous
- *   Then (distance_b) edges go DOWN from the LCA to B
- *     → each next node is the child of the previous
+ * Works for direct blood, in-laws (path includes a spouse hop),
+ * and direct spouses (path = [A, B], one ♥ edge).
  */
 export function RelationshipPath({
   result,
@@ -35,48 +37,30 @@ export function RelationshipPath({
   result: RelationshipResult;
   byId: Map<number, Person>;
 }) {
-  const { path, distance_a, distance_b } = result;
-  if (!path || path.length < 2 || distance_a === null || distance_b === null)
-    return null;
+  const { path, path_edges } = result;
+  if (!path || path.length < 2) return null;
+
+  // Determine which step (if any) is the LCA. Only meaningful for blood
+  // and in-law paths (those have distance_a defined).
+  const lcaIndex =
+    result.common_ancestor_id !== null && result.distance_a !== null
+      ? findLcaIndex(result, path)
+      : -1;
 
   const steps: Step[] = path.map((id, i) => {
     const p = byId.get(id);
-    let arrow: Step["arrowFromPrev"] = null;
-    if (i > 0) {
-      arrow = i <= distance_a ? "up" : "down";
-    }
+    const edge = i === 0 ? null : (path_edges[i - 1] as Edge | undefined) ?? null;
     return {
       id,
       name: p?.name ?? `#${id}`,
       gender: p?.gender ?? null,
       birthDate: p?.birth_date ?? null,
-      arrowFromPrev: arrow,
-      isLCA: i === distance_a, // by construction
+      edgeFromPrev: edge,
+      isLCA: i === lcaIndex,
     };
   });
 
-  // Build the prose narration
-  const aName = result.person_a_name;
-  const bName = result.person_b_name;
-  const lcaName = result.common_ancestor_name ?? "common ancestor";
-  let narration: string;
-  if (distance_a === 0 && distance_b > 0) {
-    narration = `${bName} descends from ${aName} through ${distance_b} generation${
-      distance_b === 1 ? "" : "s"
-    }.`;
-  } else if (distance_b === 0 && distance_a > 0) {
-    narration = `${aName} descends from ${bName} through ${distance_a} generation${
-      distance_a === 1 ? "" : "s"
-    }.`;
-  } else {
-    narration = `From ${aName}, go up ${distance_a} generation${
-      distance_a === 1 ? "" : "s"
-    } to ${lcaName}${
-      distance_a === distance_b ? "" : ""
-    } (common ancestor), then down ${distance_b} generation${
-      distance_b === 1 ? "" : "s"
-    } to ${bName}.`;
-  }
+  const narration = buildNarration(result);
 
   return (
     <div className="mt-6 rounded-lg border border-stone-200 bg-white p-6">
@@ -86,16 +70,7 @@ export function RelationshipPath({
       <ol className="flex flex-col items-center gap-1">
         {steps.map((step, i) => (
           <li key={`${step.id}-${i}`} className="flex flex-col items-center">
-            {step.arrowFromPrev && (
-              <ArrowSegment
-                direction={step.arrowFromPrev}
-                label={
-                  step.arrowFromPrev === "up"
-                    ? "parent"
-                    : "child"
-                }
-              />
-            )}
+            {step.edgeFromPrev && <ArrowSegment edge={step.edgeFromPrev} />}
             <PersonChip step={step} />
           </li>
         ))}
@@ -104,23 +79,77 @@ export function RelationshipPath({
   );
 }
 
-function ArrowSegment({
-  direction,
-  label,
-}: {
-  direction: "up" | "down";
-  label: string;
-}) {
+function findLcaIndex(result: RelationshipResult, path: number[]): number {
+  // path_edges has structure: [maybe spouse?] + [N parent] + [M child] + [maybe spouse?]
+  // The LCA sits right after the parent edges and right before the child edges.
+  // Scan to find the first "child" edge; the LCA is at that step's predecessor (i.e. the source of the first child edge).
+  const edges = result.path_edges ?? [];
+  const firstChildIdx = edges.indexOf("child");
+  if (firstChildIdx === -1) {
+    // No child edges → no LCA we should highlight (e.g. spouse only)
+    return -1;
+  }
+  return firstChildIdx; // node index where child edge starts = LCA position in path
+}
+
+function buildNarration(result: RelationshipResult): string {
+  const {
+    person_a_name: a,
+    person_b_name: b,
+    common_ancestor_name: lca,
+    distance_a,
+    distance_b,
+    via,
+    path_edges,
+  } = result;
+
+  const has = (k: string) => path_edges.includes(k as Edge);
+  const fmtGen = (n: number) =>
+    `${n} generation${n === 1 ? "" : "s"}`;
+
+  if (via === "blood" && distance_a !== null && distance_b !== null) {
+    if (distance_a === 0)
+      return `${b} descends from ${a} through ${fmtGen(distance_b)}.`;
+    if (distance_b === 0)
+      return `${a} descends from ${b} through ${fmtGen(distance_a)}.`;
+    return `From ${a}, go up ${fmtGen(distance_a)} to ${lca} (common ancestor), then down ${fmtGen(distance_b)} to ${b}.`;
+  }
+
+  if (via === "your-spouse" && distance_a !== null && distance_b !== null) {
+    return `Through ${a}'s spouse, then up ${fmtGen(distance_a)} to ${lca} (common ancestor) and down ${fmtGen(distance_b)} to ${b}.`;
+  }
+
+  if (via === "their-spouse" && distance_a !== null && distance_b !== null) {
+    return `From ${a}, up ${fmtGen(distance_a)} to ${lca} (common ancestor), down ${fmtGen(distance_b)} to ${b}'s spouse, then to ${b}.`;
+  }
+
+  if (via === "spouse" || (path_edges.length === 1 && has("spouse"))) {
+    return `${a} and ${b} are married.`;
+  }
+
+  return `${a} and ${b} are connected.`;
+}
+
+function ArrowSegment({ edge }: { edge: Edge }) {
+  const config = {
+    parent: { glyph: "↑", label: "parent", color: "text-stone-500" },
+    child: { glyph: "↓", label: "child", color: "text-stone-500" },
+    spouse: { glyph: "♥", label: "spouse", color: "text-rose-600" },
+  }[edge];
+
   return (
     <div className="my-1 flex flex-col items-center">
-      <span
-        className="text-sm font-medium text-stone-500"
-        aria-hidden
-      >
-        {direction === "up" ? "↑" : "↓"}
+      <span className={`text-base font-medium ${config.color}`} aria-hidden>
+        {config.glyph}
       </span>
-      <span className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
-        {label}
+      <span
+        className={`rounded px-2 py-0.5 text-xs ${
+          edge === "spouse"
+            ? "bg-rose-50 text-rose-700"
+            : "bg-stone-100 text-stone-600"
+        }`}
+      >
+        {config.label}
       </span>
     </div>
   );
@@ -151,7 +180,9 @@ function PersonChip({ step }: { step: Step }) {
       <div>
         <div className="font-semibold text-stone-900">{step.name}</div>
         {step.birthDate && (
-          <div className="text-xs text-stone-500">b. {step.birthDate.slice(0, 4)}</div>
+          <div className="text-xs text-stone-500">
+            b. {step.birthDate.slice(0, 4)}
+          </div>
         )}
       </div>
       {step.isLCA && (

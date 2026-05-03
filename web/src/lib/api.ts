@@ -53,6 +53,8 @@ export interface RelationshipResult {
   distance_a: number | null;
   distance_b: number | null;
   path: number[];
+  path_edges: ("parent" | "child" | "spouse")[];
+  via: string | null;
 }
 
 export interface User {

@@ -213,23 +213,22 @@ def find_in_law(
     Two paths are tried:
       Path 1: A's spouse S has a blood relation to B.
               -> B is "A's <spouse's-relation-to-B>-in-law"
-              e.g. spouse's father    -> father-in-law
-                   spouse's brother   -> brother-in-law
       Path 2: A has a blood relation to B's spouse S'.
               -> B married into A's family via S'.
-              We re-compute name_relationship using B's gender so the
-              role naturally becomes son/daughter/brother/sister, etc.
-              e.g. A's daughter married B -> son-in-law / daughter-in-law
-                   A's brother  married B -> sister-in-law / brother-in-law
 
-    Returns dict { label, lca_id, distance_a, distance_b, path_via } or None.
+    Returns dict {label, lca_id, distance_a, distance_b, via, path, path_edges}
+    or None.
+
+    `path` is the full sequence of person ids from A to B.
+    `path_edges` is a list of "parent"/"child"/"spouse" labels with
+    len(path) - 1 entries that describe how each consecutive pair is linked.
     """
-    best = None  # (total_distance, dict)
+    best: Optional[Tuple[int, dict]] = None
 
-    def _consider(label_blood, total_dist, payload):
+    def _consider(payload: dict, total_dist: int):
         nonlocal best
         if best is None or total_dist < best[0]:
-            best = (total_dist, {**payload, "label": f"{label_blood}-in-law"})
+            best = (total_dist, payload)
 
     # Path 1: A's spouse S, blood S -> B
     for s_id in get_spouses(db, a_id):
@@ -242,21 +241,32 @@ def find_in_law(
         blood = name_relationship(ds, dbg, gender_b)
         if blood == "self":
             continue
+        # Path: a_id -> s_id -> ... up ... -> lca -> ... down ... -> b_id
+        s_to_lca = path_to_ancestor(db, s_id, lca_id)        # length ds+1
+        b_to_lca = path_to_ancestor(db, b_id, lca_id)        # length dbg+1
+        if not s_to_lca or not b_to_lca:
+            continue
+        full_path = [a_id] + s_to_lca + list(reversed(b_to_lca))[1:]
+        edges = (
+            ["spouse"]
+            + ["parent"] * ds
+            + ["child"] * dbg
+        )
         _consider(
-            blood,
-            ds + dbg,
             {
+                "label": f"{blood}-in-law",
                 "lca_id": lca_id,
                 "distance_a": ds,
                 "distance_b": dbg,
                 "via": "your-spouse",
                 "via_id": s_id,
+                "path": full_path,
+                "path_edges": edges,
             },
+            ds + dbg + 1,
         )
 
-    # Path 2: B's spouse S', blood A -> S'.
-    # We deliberately use B's gender so the label reflects B's role
-    # (e.g. A's daughter married B -> "son" if B male -> son-in-law).
+    # Path 2: B's spouse S', blood A -> S'
     for sp_id in get_spouses(db, b_id):
         a_anc = ancestors_with_depth(db, a_id)
         sp_anc = ancestors_with_depth(db, sp_id)
@@ -264,19 +274,32 @@ def find_in_law(
         if not lca:
             continue
         lca_id, da, dsp = lca
+        # Use B's gender for the "fictive" role label
         blood = name_relationship(da, dsp, gender_b)
         if blood == "self":
             continue
+        a_to_lca = path_to_ancestor(db, a_id, lca_id)
+        sp_to_lca = path_to_ancestor(db, sp_id, lca_id)
+        if not a_to_lca or not sp_to_lca:
+            continue
+        full_path = a_to_lca + list(reversed(sp_to_lca))[1:] + [b_id]
+        edges = (
+            ["parent"] * da
+            + ["child"] * dsp
+            + ["spouse"]
+        )
         _consider(
-            blood,
-            da + dsp,
             {
+                "label": f"{blood}-in-law",
                 "lca_id": lca_id,
                 "distance_a": da,
                 "distance_b": dsp,
                 "via": "their-spouse",
                 "via_id": sp_id,
+                "path": full_path,
+                "path_edges": edges,
             },
+            da + dsp + 1,
         )
 
     return best[1] if best else None

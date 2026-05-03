@@ -86,3 +86,5 @@ class RelationshipResult(BaseModel):
     distance_a: Optional[int] = None
     distance_b: Optional[int] = None
     path: List[int] = []  # for highlighting in UI
+    path_edges: List[str] = []  # "parent" | "child" | "spouse" between consecutive path entries
+    via: Optional[str] = None  # e.g. "blood", "your-spouse", "their-spouse", "spouse"

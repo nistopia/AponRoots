@@ -30,7 +30,28 @@ def test_father_in_law(auth_client):
     client.post(f"/persons/{spouse}/parents", headers=headers, json={"parent_id": fil})
     link_spouse(client, headers, me, spouse)
 
-    assert "father-in-law" in rel(client, headers, me, fil)
+    r = client.get(f"/relationships?a={me}&b={fil}", headers=headers)
+    body = r.json()
+    assert "father-in-law" in body["relationship"]
+    # Path should be [me, spouse, fil] with edges [spouse, parent]
+    assert body["path"] == [me, spouse, fil]
+    assert body["path_edges"] == ["spouse", "parent"]
+    assert body["via"] == "your-spouse"
+
+
+def test_son_in_law_path(auth_client):
+    """My daughter's husband -> son-in-law. Path [me, daughter, husband], edges [child, spouse]."""
+    client, headers, _ = auth_client
+    me = make(client, headers, "Me", "M")
+    daughter = make(client, headers, "Daughter", "F", [me])
+    husband = make(client, headers, "Husband", "M")
+    link_spouse(client, headers, daughter, husband)
+
+    r = client.get(f"/relationships?a={me}&b={husband}", headers=headers).json()
+    assert "son-in-law" in r["relationship"]
+    assert r["path"] == [me, daughter, husband]
+    assert r["path_edges"] == ["child", "spouse"]
+    assert r["via"] == "their-spouse"
 
 
 def test_mother_in_law(auth_client):
