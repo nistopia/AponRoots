@@ -200,3 +200,83 @@ def build_relationship_path(db: Session, a: int, b: int, lca: int) -> List[int]:
     if not up or not down:
         return []
     return up + list(reversed(down))[1:]  # skip duplicated LCA
+
+
+# ---------- In-law detection ----------
+
+def find_in_law(
+    db: Session, a_id: int, b_id: int, gender_b: Optional[str]
+):
+    """
+    Detects in-law relationships when A and B share no direct blood ancestor.
+
+    Two paths are tried:
+      Path 1: A's spouse S has a blood relation to B.
+              -> B is "A's <spouse's-relation-to-B>-in-law"
+              e.g. spouse's father    -> father-in-law
+                   spouse's brother   -> brother-in-law
+      Path 2: A has a blood relation to B's spouse S'.
+              -> B married into A's family via S'.
+              We re-compute name_relationship using B's gender so the
+              role naturally becomes son/daughter/brother/sister, etc.
+              e.g. A's daughter married B -> son-in-law / daughter-in-law
+                   A's brother  married B -> sister-in-law / brother-in-law
+
+    Returns dict { label, lca_id, distance_a, distance_b, path_via } or None.
+    """
+    best = None  # (total_distance, dict)
+
+    def _consider(label_blood, total_dist, payload):
+        nonlocal best
+        if best is None or total_dist < best[0]:
+            best = (total_dist, {**payload, "label": f"{label_blood}-in-law"})
+
+    # Path 1: A's spouse S, blood S -> B
+    for s_id in get_spouses(db, a_id):
+        s_anc = ancestors_with_depth(db, s_id)
+        b_anc = ancestors_with_depth(db, b_id)
+        lca = find_lca(s_anc, b_anc)
+        if not lca:
+            continue
+        lca_id, ds, dbg = lca
+        blood = name_relationship(ds, dbg, gender_b)
+        if blood == "self":
+            continue
+        _consider(
+            blood,
+            ds + dbg,
+            {
+                "lca_id": lca_id,
+                "distance_a": ds,
+                "distance_b": dbg,
+                "via": "your-spouse",
+                "via_id": s_id,
+            },
+        )
+
+    # Path 2: B's spouse S', blood A -> S'.
+    # We deliberately use B's gender so the label reflects B's role
+    # (e.g. A's daughter married B -> "son" if B male -> son-in-law).
+    for sp_id in get_spouses(db, b_id):
+        a_anc = ancestors_with_depth(db, a_id)
+        sp_anc = ancestors_with_depth(db, sp_id)
+        lca = find_lca(a_anc, sp_anc)
+        if not lca:
+            continue
+        lca_id, da, dsp = lca
+        blood = name_relationship(da, dsp, gender_b)
+        if blood == "self":
+            continue
+        _consider(
+            blood,
+            da + dsp,
+            {
+                "lca_id": lca_id,
+                "distance_a": da,
+                "distance_b": dsp,
+                "via": "their-spouse",
+                "via_id": sp_id,
+            },
+        )
+
+    return best[1] if best else None

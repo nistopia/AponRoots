@@ -7,6 +7,8 @@ from ..deps import get_current_user
 from ..relationship import (
     ancestors_with_depth,
     find_lca,
+    find_in_law,
+    get_spouses,
     name_relationship,
     build_relationship_path,
 )
@@ -42,29 +44,56 @@ def find_relationship(
     b_anc = ancestors_with_depth(db, b)
     lca_info = find_lca(a_anc, b_anc)
 
-    if lca_info is None:
+    # 1) Direct blood relationship?
+    if lca_info is not None:
+        lca_id, da, dbg = lca_info
+        label = name_relationship(da, dbg, person_b.gender)
+        lca_person = db.get(models.Person, lca_id)
+        path = build_relationship_path(db, a, b, lca_id)
         return schemas.RelationshipResult(
             person_a_id=a,
             person_b_id=b,
             person_a_name=person_a.name,
             person_b_name=person_b.name,
-            relationship="no known blood relationship",
+            relationship=f"{person_b.name} is {person_a.name}'s {label}",
+            common_ancestor_id=lca_id,
+            common_ancestor_name=lca_person.name if lca_person else None,
+            distance_a=da,
+            distance_b=dbg,
+            path=path,
         )
 
-    lca_id, da, dbg = lca_info
-    label = name_relationship(da, dbg, person_b.gender)
-    lca_person = db.get(models.Person, lca_id)
-    path = build_relationship_path(db, a, b, lca_id)
+    # 2) In-law via spouse links?
+    in_law = find_in_law(db, a, b, person_b.gender)
+    if in_law is not None:
+        lca_person = db.get(models.Person, in_law["lca_id"])
+        return schemas.RelationshipResult(
+            person_a_id=a,
+            person_b_id=b,
+            person_a_name=person_a.name,
+            person_b_name=person_b.name,
+            relationship=f"{person_b.name} is {person_a.name}'s {in_law['label']}",
+            common_ancestor_id=in_law["lca_id"],
+            common_ancestor_name=lca_person.name if lca_person else None,
+            distance_a=in_law["distance_a"],
+            distance_b=in_law["distance_b"],
+            path=[],
+        )
+
+    # 3) Spouses themselves
+    if b in get_spouses(db, a):
+        return schemas.RelationshipResult(
+            person_a_id=a,
+            person_b_id=b,
+            person_a_name=person_a.name,
+            person_b_name=person_b.name,
+            relationship=f"{person_b.name} is {person_a.name}'s spouse",
+        )
 
     return schemas.RelationshipResult(
         person_a_id=a,
         person_b_id=b,
         person_a_name=person_a.name,
         person_b_name=person_b.name,
-        relationship=f"{person_b.name} is {person_a.name}'s {label}",
-        common_ancestor_id=lca_id,
-        common_ancestor_name=lca_person.name if lca_person else None,
-        distance_a=da,
-        distance_b=dbg,
-        path=path,
+        relationship="no known relationship",
     )

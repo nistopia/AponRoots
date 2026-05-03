@@ -48,7 +48,7 @@ def test_self_and_unrelated(auth_client):
     a = make(client, headers, "Alice", "F")
     b = make(client, headers, "Bob", "M")
     assert rel(client, headers, a, a) == "self"
-    assert "no known blood relationship" in rel(client, headers, a, b)
+    assert "no known" in rel(client, headers, a, b)
 
 
 def test_great_grandparent_chain(auth_client):
