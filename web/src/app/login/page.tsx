@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -30,6 +31,10 @@ export default function LoginPage() {
 
   return (
     <AuthShell title="Welcome back">
+      <div className="mb-5 flex justify-center">
+        <GoogleSignInButton />
+      </div>
+      <Divider />
       <form onSubmit={onSubmit} className="space-y-4">
         <Field label="Email">
           <input
@@ -93,6 +98,16 @@ export function AuthShell({
         <h2 className="mb-6 text-lg text-stone-600">{title}</h2>
         {children}
       </div>
+    </div>
+  );
+}
+
+export function Divider() {
+  return (
+    <div className="my-5 flex items-center gap-3 text-xs text-stone-400">
+      <hr className="flex-1 border-stone-200" />
+      <span>or with email</span>
+      <hr className="flex-1 border-stone-200" />
     </div>
   );
 }

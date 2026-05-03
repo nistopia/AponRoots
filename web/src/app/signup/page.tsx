@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { AuthShell } from "../login/page";
+import { AuthShell, Divider } from "../login/page";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 export default function SignupPage() {
   const { signup } = useAuth();
@@ -32,6 +33,10 @@ export default function SignupPage() {
 
   return (
     <AuthShell title="Create your account">
+      <div className="mb-5 flex justify-center">
+        <GoogleSignInButton />
+      </div>
+      <Divider />
       <form onSubmit={onSubmit} className="space-y-4">
         <Field label="Your name">
           <input
