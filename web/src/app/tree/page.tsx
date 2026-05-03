@@ -97,21 +97,30 @@ export default function TreePage() {
             pathFunc="step"
             separation={{ siblings: 1.2, nonSiblings: 1.5 }}
             nodeSize={{ x: 180, y: 100 }}
-            renderCustomNodeElement={({ nodeDatum }) => (
-              <g>
-                <circle r={18} fill="#047857" />
-                <text
-                  fill="#0c4a6e"
-                  strokeWidth={0}
-                  x={24}
-                  y={5}
-                  fontSize={14}
-                  fontWeight={600}
-                >
-                  {nodeDatum.name}
-                </text>
-              </g>
-            )}
+            renderCustomNodeElement={({ nodeDatum }) => {
+              const gender = nodeDatum.attributes?.gender;
+              const fill =
+                gender === "F" ? "#db2777" : gender === "M" ? "#1d4ed8" : "#047857";
+              return (
+                <g>
+                  <circle r={20} fill={fill} stroke="#ffffff" strokeWidth={3} />
+                  {/* white halo behind the text for readability on any bg */}
+                  <text
+                    x={28}
+                    y={6}
+                    fontSize={16}
+                    fontWeight={700}
+                    stroke="#ffffff"
+                    strokeWidth={5}
+                    paintOrder="stroke"
+                    fill="#0f172a"
+                    style={{ fontFamily: "system-ui, sans-serif" }}
+                  >
+                    {nodeDatum.name}
+                  </text>
+                </g>
+              );
+            }}
           />
         )}
       </div>
