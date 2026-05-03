@@ -32,6 +32,17 @@ def get_children(db: Session, person_id: int) -> List[int]:
     return [r[0] for r in rows]
 
 
+def get_spouses(db: Session, person_id: int) -> List[int]:
+    """Returns all current spouse/partner IDs for a person (bidirectional lookup)."""
+    a_rows = db.query(models.Union.partner_b_id).filter(
+        models.Union.partner_a_id == person_id
+    ).all()
+    b_rows = db.query(models.Union.partner_a_id).filter(
+        models.Union.partner_b_id == person_id
+    ).all()
+    return [r[0] for r in a_rows] + [r[0] for r in b_rows]
+
+
 def ancestors_with_depth(db: Session, person_id: int, max_depth: int = 20) -> Dict[int, int]:
     """BFS upward: returns {ancestor_id: depth}. Includes the person themself at depth 0."""
     visited: Dict[int, int] = {person_id: 0}

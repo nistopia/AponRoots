@@ -15,6 +15,7 @@ export interface Person {
   notes: string | null;
   parent_ids: number[];
   children_ids: number[];
+  spouse_ids: number[];
 }
 
 export interface PersonCreate {
@@ -77,6 +78,15 @@ export const api = {
     }),
   removeParent: (childId: number, parentId: number) =>
     request<void>(`/persons/${childId}/parents/${parentId}`, {
+      method: "DELETE",
+    }),
+  addSpouse: (personId: number, spouseId: number) =>
+    request<Person>(`/persons/${personId}/spouses`, {
+      method: "POST",
+      body: JSON.stringify({ spouse_id: spouseId }),
+    }),
+  removeSpouse: (personId: number, spouseId: number) =>
+    request<void>(`/persons/${personId}/spouses/${spouseId}`, {
       method: "DELETE",
     }),
   findRelationship: (a: number, b: number) =>

@@ -71,6 +71,11 @@ function PersonCard({
   byId: Map<number, Person>;
   onDelete: () => void;
 }) {
+  const names = (ids: number[]) =>
+    ids.length > 0
+      ? ids.map((id) => byId.get(id)?.name ?? `#${id}`).join(", ")
+      : "—";
+
   return (
     <li className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm transition hover:shadow">
       <div className="flex items-start justify-between gap-3">
@@ -82,35 +87,31 @@ function PersonCard({
             </span>
           </h2>
           {person.birth_date && (
-            <p className="text-sm text-stone-500">
-              Born {person.birth_date}
-            </p>
+            <p className="text-sm text-stone-500">Born {person.birth_date}</p>
           )}
         </div>
-        <button
-          onClick={() => {
-            if (confirm(`Delete ${person.name}?`)) onDelete();
-          }}
-          className="text-xs text-stone-400 hover:text-red-600"
-        >
-          ✕
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/persons/${person.id}/edit`}
+            className="text-xs font-medium text-emerald-700 hover:underline"
+          >
+            Edit
+          </Link>
+          <button
+            onClick={() => {
+              if (confirm(`Delete ${person.name}?`)) onDelete();
+            }}
+            className="text-xs text-stone-400 hover:text-red-600"
+            title="Delete"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
-      <Detail label="Parents">
-        {person.parent_ids.length > 0
-          ? person.parent_ids
-              .map((id) => byId.get(id)?.name ?? `#${id}`)
-              .join(", ")
-          : "—"}
-      </Detail>
-      <Detail label="Children">
-        {person.children_ids.length > 0
-          ? person.children_ids
-              .map((id) => byId.get(id)?.name ?? `#${id}`)
-              .join(", ")
-          : "—"}
-      </Detail>
+      <Detail label="Parents">{names(person.parent_ids)}</Detail>
+      <Detail label="Children">{names(person.children_ids)}</Detail>
+      <Detail label="Spouses">{names(person.spouse_ids)}</Detail>
     </li>
   );
 }

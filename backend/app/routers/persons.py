@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..database import get_db
-from ..relationship import get_parents, get_children, ancestors_with_depth
+from ..relationship import get_parents, get_children, get_spouses, ancestors_with_depth
 
 router = APIRouter(prefix="/persons", tags=["persons"])
 
@@ -19,6 +19,7 @@ def _to_out(db: Session, person: models.Person) -> schemas.PersonOut:
         notes=person.notes,
         parent_ids=get_parents(db, person.id),
         children_ids=get_children(db, person.id),
+        spouse_ids=get_spouses(db, person.id),
     )
 
 
@@ -120,5 +121,35 @@ def remove_parent(person_id: int, parent_id: int, db: Session = Depends(get_db))
     ).first()
     if not row:
         raise HTTPException(404, "Parent link not found")
+    db.delete(row)
+    db.commit()
+
+
+@router.post("/{person_id}/spouses", response_model=schemas.PersonOut)
+def add_spouse(person_id: int, link: schemas.SpouseLink, db: Session = Depends(get_db)):
+    person = db.get(models.Person, person_id)
+    spouse = db.get(models.Person, link.spouse_id)
+    if not person or not spouse:
+        raise HTTPException(404, "Person or spouse not found")
+    if person_id == link.spouse_id:
+        raise HTTPException(400, "A person cannot be their own spouse")
+
+    # Always store with smaller id first (matches CHECK constraint)
+    a, b = sorted([person_id, link.spouse_id])
+    existing = db.query(models.Union).filter_by(partner_a_id=a, partner_b_id=b).first()
+    if existing:
+        raise HTTPException(400, "These people are already linked as spouses")
+
+    db.add(models.Union(partner_a_id=a, partner_b_id=b))
+    db.commit()
+    return _to_out(db, person)
+
+
+@router.delete("/{person_id}/spouses/{spouse_id}", status_code=204)
+def remove_spouse(person_id: int, spouse_id: int, db: Session = Depends(get_db)):
+    a, b = sorted([person_id, spouse_id])
+    row = db.query(models.Union).filter_by(partner_a_id=a, partner_b_id=b).first()
+    if not row:
+        raise HTTPException(404, "Spouse link not found")
     db.delete(row)
     db.commit()

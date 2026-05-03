@@ -27,6 +27,7 @@ class PersonOut(PersonBase):
     id: int
     parent_ids: List[int] = []
     children_ids: List[int] = []
+    spouse_ids: List[int] = []
 
     class Config:
         from_attributes = True
@@ -34,6 +35,10 @@ class PersonOut(PersonBase):
 
 class ParentLink(BaseModel):
     parent_id: int
+
+
+class SpouseLink(BaseModel):
+    spouse_id: int
 
 
 class RelationshipResult(BaseModel):

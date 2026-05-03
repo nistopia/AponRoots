@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, UniqueConstraint, CheckConstraint
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -31,3 +31,21 @@ class ParentChild(Base):
 
     parent = relationship("Person", foreign_keys=[parent_id])
     child = relationship("Person", foreign_keys=[child_id])
+
+
+class Union(Base):
+    """Spouse / partner link. Stored as an unordered pair (always partner_a_id < partner_b_id)."""
+
+    __tablename__ = "unions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    partner_a_id = Column(Integer, ForeignKey("persons.id", ondelete="CASCADE"), nullable=False)
+    partner_b_id = Column(Integer, ForeignKey("persons.id", ondelete="CASCADE"), nullable=False)
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
+    union_type = Column(String, default="marriage")  # marriage | partnership | divorced
+
+    __table_args__ = (
+        UniqueConstraint("partner_a_id", "partner_b_id", name="uq_union_pair"),
+        CheckConstraint("partner_a_id < partner_b_id", name="ck_union_ordered"),
+    )
