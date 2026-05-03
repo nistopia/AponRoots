@@ -1,0 +1,12 @@
+# Local dev artifacts — do not ship to image
+.venv/
+__pycache__/
+*.pyc
+*.db
+*.sqlite
+*.sqlite3
+.pytest_cache/
+.coverage
+.env
+*.backup-pre-auth
+tests/

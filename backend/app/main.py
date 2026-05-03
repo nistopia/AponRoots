@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,9 +14,21 @@ app = FastAPI(
     version="0.2.0",
 )
 
+# Comma-separated list of allowed origins, override via env in prod.
+DEFAULT_ORIGINS = ",".join([
+    "http://localhost:3000",
+    "https://aponroots.com",
+    "https://www.aponroots.com",
+])
+allowed_origins = [
+    o.strip()
+    for o in os.environ.get("ALLOWED_ORIGINS", DEFAULT_ORIGINS).split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.js dev
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

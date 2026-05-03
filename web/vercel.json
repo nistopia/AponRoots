@@ -1,0 +1,10 @@
+# Vercel: monorepo root build settings
+# See: https://vercel.com/docs/projects/project-configuration
+
+# When importing this repo into Vercel, set:
+#   Root Directory: web
+# (Vercel will then auto-detect Next.js inside web/.)
+# This file is here so Vercel + custom domains play nice.
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json"
+}
