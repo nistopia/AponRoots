@@ -247,7 +247,10 @@ export default function TreePage() {
       </div>
 
       <p className="mt-3 text-xs text-stone-500">
-        🔵 Male · 🩷 Female · 🟢 Other / unset · ♥ link = spouse
+        <span className="text-blue-700">♂</span> Male ·{" "}
+        <span className="text-pink-600">♀</span> Female ·{" "}
+        <span className="text-emerald-700">⚧</span> Other / unset · ♥ link
+        = spouse
       </p>
     </section>
   );
