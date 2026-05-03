@@ -51,6 +51,16 @@ def create_person(payload: schemas.PersonCreate, db: Session = Depends(get_db)):
     return _to_out(db, person)
 
 
+@router.get("/search", response_model=List[schemas.PersonOut])
+def search_persons(q: str = "", limit: int = 50, db: Session = Depends(get_db)):
+    """Case-insensitive substring search on name. Empty q returns first `limit` people."""
+    query = db.query(models.Person)
+    if q.strip():
+        query = query.filter(models.Person.name.ilike(f"%{q.strip()}%"))
+    rows = query.order_by(models.Person.name).limit(limit).all()
+    return [_to_out(db, p) for p in rows]
+
+
 @router.get("", response_model=List[schemas.PersonOut])
 def list_persons(db: Session = Depends(get_db)):
     return [_to_out(db, p) for p in db.query(models.Person).order_by(models.Person.id).all()]

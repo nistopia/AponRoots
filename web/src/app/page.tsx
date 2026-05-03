@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Person } from "@/lib/api";
 
@@ -16,6 +17,15 @@ export default function PeoplePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["persons"] }),
   });
 
+  const [filter, setFilter] = useState("");
+  const people = useMemo(() => data ?? [], [data]);
+  const filtered = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return people;
+    return people.filter((p) => p.name.toLowerCase().includes(q));
+  }, [people, filter]);
+  const byId = useMemo(() => new Map(people.map((p) => [p.id, p])), [people]);
+
   if (isLoading) return <p className="text-stone-500">Loading…</p>;
   if (error)
     return (
@@ -29,13 +39,12 @@ export default function PeoplePage() {
       </p>
     );
 
-  const people = data ?? [];
-  const byId = new Map(people.map((p) => [p.id, p]));
-
   return (
     <section>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">People in your tree</h1>
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold text-stone-900">
+          People in your tree
+        </h1>
         <Link
           href="/add"
           className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
@@ -44,11 +53,30 @@ export default function PeoplePage() {
         </Link>
       </div>
 
+      {people.length > 0 && (
+        <div className="mb-4 flex items-center gap-3">
+          <input
+            type="search"
+            placeholder="Filter by name…"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="w-full max-w-sm rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+          />
+          <span className="text-sm text-stone-500">
+            {filtered.length} of {people.length}
+          </span>
+        </div>
+      )}
+
       {people.length === 0 ? (
         <EmptyState />
+      ) : filtered.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-stone-300 bg-white p-8 text-center text-stone-500">
+          No people match &ldquo;{filter}&rdquo;.
+        </p>
       ) : (
         <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {people.map((p) => (
+          {filtered.map((p) => (
             <PersonCard
               key={p.id}
               person={p}

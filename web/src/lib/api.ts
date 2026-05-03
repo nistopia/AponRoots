@@ -89,6 +89,10 @@ export const api = {
     request<void>(`/persons/${personId}/spouses/${spouseId}`, {
       method: "DELETE",
     }),
+  searchPersons: (q: string, limit = 20) =>
+    request<Person[]>(
+      `/persons/search?q=${encodeURIComponent(q)}&limit=${limit}`,
+    ),
   findRelationship: (a: number, b: number) =>
     request<RelationshipResult>(`/relationships?a=${a}&b=${b}`),
 };
