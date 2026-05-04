@@ -2,7 +2,7 @@
 # Deploy with `fly deploy` from the backend/ directory.
 
 app = "aponroots-api"
-primary_region = "sea"
+primary_region = "sjc"
 
 [build]
 
