@@ -26,6 +26,10 @@ export interface Person {
   birth_date: string | null;
   death_date: string | null;
   notes: string | null;
+  photo_url: string | null;
+  birthplace: string | null;
+  current_location: string | null;
+  occupation: string | null;
   parent_ids: number[];
   children_ids: number[];
   spouse_ids: number[];
@@ -39,6 +43,10 @@ export interface PersonCreate {
   birth_date?: string | null;
   death_date?: string | null;
   notes?: string | null;
+  photo_url?: string | null;
+  birthplace?: string | null;
+  current_location?: string | null;
+  occupation?: string | null;
   parent_ids?: number[];
 }
 
@@ -149,6 +157,23 @@ export const api = {
     request<void>(`/persons/${personId}/spouses/${spouseId}`, {
       method: "DELETE",
     }),
+  uploadPhoto: async (personId: number, file: File): Promise<Person> => {
+    const token = getToken();
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${API_URL}/persons/${personId}/photo`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: fd,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new ApiError(`API ${res.status}: ${text}`, res.status);
+    }
+    return res.json();
+  },
+  removePhoto: (personId: number) =>
+    request<Person>(`/persons/${personId}/photo`, { method: "DELETE" }),
   searchPersons: (q: string, limit = 20) =>
     request<Person[]>(
       `/persons/search?q=${encodeURIComponent(q)}&limit=${limit}`,

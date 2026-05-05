@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Person } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Landing } from "@/components/Landing";
+import { PersonAvatar } from "@/components/PersonAvatar";
 
 export default function PeoplePage() {
   const { user, loading: authLoading } = useAuth();
@@ -129,17 +130,28 @@ function PersonCard({
   return (
     <li className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm transition hover:shadow">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">
-            {person.name}{" "}
-            <span className="text-sm font-normal text-stone-500">
-              {person.gender ? `(${person.gender})` : ""}
-            </span>
-          </h2>
-          {person.birth_date && (
-            <p className="text-sm text-stone-500">Born {person.birth_date}</p>
-          )}
-        </div>
+        <Link
+          href={`/persons/${person.id}`}
+          className="flex flex-1 items-center gap-3 hover:opacity-90"
+        >
+          <PersonAvatar
+            photoUrl={person.photo_url}
+            gender={person.gender}
+            name={person.name}
+            size={48}
+          />
+          <div>
+            <h2 className="text-lg font-semibold">
+              {person.name}{" "}
+              <span className="text-sm font-normal text-stone-500">
+                {person.gender ? `(${person.gender})` : ""}
+              </span>
+            </h2>
+            {person.birth_date && (
+              <p className="text-sm text-stone-500">Born {person.birth_date}</p>
+            )}
+          </div>
+        </Link>
         <div className="flex items-center gap-2">
           {person.can_edit ? (
             <>

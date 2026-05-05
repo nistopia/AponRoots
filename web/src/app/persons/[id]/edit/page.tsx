@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Gender, type Person } from "@/lib/api";
 import { PersonAutocomplete } from "@/components/PersonAutocomplete";
+import { PhotoUploader } from "@/components/PhotoUploader";
 
 export default function EditPersonPage({
   params,
@@ -30,6 +31,9 @@ export default function EditPersonPage({
   const [gender, setGender] = useState<Gender | "">("");
   const [birthDate, setBirthDate] = useState("");
   const [deathDate, setDeathDate] = useState("");
+  const [birthplace, setBirthplace] = useState("");
+  const [currentLocation, setCurrentLocation] = useState("");
+  const [occupation, setOccupation] = useState("");
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
@@ -38,6 +42,9 @@ export default function EditPersonPage({
     setGender((person.gender as Gender) ?? "");
     setBirthDate(person.birth_date ?? "");
     setDeathDate(person.death_date ?? "");
+    setBirthplace(person.birthplace ?? "");
+    setCurrentLocation(person.current_location ?? "");
+    setOccupation(person.occupation ?? "");
     setNotes(person.notes ?? "");
   }, [person]);
 
@@ -48,6 +55,9 @@ export default function EditPersonPage({
         gender: gender || null,
         birth_date: birthDate || null,
         death_date: deathDate || null,
+        birthplace: birthplace || null,
+        current_location: currentLocation || null,
+        occupation: occupation || null,
         notes: notes || null,
       }),
     onSuccess: () => {
@@ -107,13 +117,19 @@ export default function EditPersonPage({
       <h1 className="mb-1 text-2xl font-semibold">Edit {person.name}</h1>
       <p className="mb-6 text-sm text-stone-500">ID #{person.id}</p>
 
+      {/* Photo */}
+      <div className="rounded-lg border border-stone-200 bg-white p-5">
+        <h2 className="mb-4 font-semibold">Profile photo</h2>
+        <PhotoUploader person={person} />
+      </div>
+
       {/* Basic info */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
           update.mutate();
         }}
-        className="space-y-4 rounded-lg border border-stone-200 bg-white p-5"
+        className="mt-6 space-y-4 rounded-lg border border-stone-200 bg-white p-5"
       >
         <h2 className="font-semibold">Personal info</h2>
         <Field label="Name *">
@@ -155,6 +171,33 @@ export default function EditPersonPage({
             />
           </Field>
         </div>
+        <Field label="Birthplace">
+          <input
+            type="text"
+            value={birthplace}
+            onChange={(e) => setBirthplace(e.target.value)}
+            placeholder="e.g. Dhaka, Bangladesh"
+            className={inputCls}
+          />
+        </Field>
+        <Field label="Current location">
+          <input
+            type="text"
+            value={currentLocation}
+            onChange={(e) => setCurrentLocation(e.target.value)}
+            placeholder="e.g. Seattle, USA"
+            className={inputCls}
+          />
+        </Field>
+        <Field label="Occupation">
+          <input
+            type="text"
+            value={occupation}
+            onChange={(e) => setOccupation(e.target.value)}
+            placeholder="e.g. Software engineer"
+            className={inputCls}
+          />
+        </Field>
         <Field label="Notes">
           <textarea
             value={notes}
@@ -178,10 +221,10 @@ export default function EditPersonPage({
           </button>
           <button
             type="button"
-            onClick={() => router.push("/")}
+            onClick={() => router.push(`/persons/${personId}`)}
             className={secondaryBtn}
           >
-            Done
+            View profile
           </button>
         </div>
       </form>
