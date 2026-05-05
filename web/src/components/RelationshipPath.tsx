@@ -107,6 +107,15 @@ function buildNarration(result: RelationshipResult): string {
   const fmtGen = (n: number) =>
     `${n} generation${n === 1 ? "" : "s"}`;
 
+  // Count blood edges around the LCA (ignoring spouse hops) so the
+  // narration is accurate for in-law paths too.
+  const upCount = path_edges.filter((e) => e === "parent").length;
+  const downCount = path_edges.filter((e) => e === "child").length;
+  const upPart = upCount > 0 ? `up ${fmtGen(upCount)}` : "";
+  const downPart = downCount > 0 ? `down ${fmtGen(downCount)}` : "";
+  const joinUpDown = (pre: string, post: string) =>
+    [pre, post].filter(Boolean).join(", then ");
+
   if (via === "blood" && distance_a !== null && distance_b !== null) {
     if (distance_a === 0)
       return `${b} descends from ${a} through ${fmtGen(distance_b)}.`;
@@ -115,15 +124,29 @@ function buildNarration(result: RelationshipResult): string {
     return `From ${a}, go up ${fmtGen(distance_a)} to ${lca} (common ancestor), then down ${fmtGen(distance_b)} to ${b}.`;
   }
 
-  if (via === "your-spouse" && distance_a !== null && distance_b !== null) {
-    return `Through ${a}'s spouse, then up ${fmtGen(distance_a)} to ${lca} (common ancestor) and down ${fmtGen(distance_b)} to ${b}.`;
+  if (via === "your-spouse") {
+    const middle = joinUpDown(upPart, downPart);
+    if (lca && middle) {
+      return `Through ${a}'s spouse, then ${middle.replace(
+        upPart,
+        `${upPart} to ${lca} (common ancestor)`,
+      )} to ${b}.`;
+    }
+    return `Connected through ${a}'s spouse to ${b}.`;
   }
 
-  if (via === "their-spouse" && distance_a !== null && distance_b !== null) {
-    return `From ${a}, up ${fmtGen(distance_a)} to ${lca} (common ancestor), down ${fmtGen(distance_b)} to ${b}'s spouse, then to ${b}.`;
+  if (via === "their-spouse") {
+    const middle = joinUpDown(upPart, downPart);
+    if (lca && middle) {
+      return `From ${a}, ${middle.replace(
+        upPart,
+        `${upPart} to ${lca} (common ancestor)`,
+      )} to ${b}'s spouse, then to ${b}.`;
+    }
+    return `Connected from ${a} via ${b}'s spouse to ${b}.`;
   }
 
-  if (via === "co-in-law" && distance_a !== null && distance_b !== null) {
+  if (via === "co-in-law") {
     return `${a}'s descendant married ${b}'s descendant — they are connected through that marriage.`;
   }
 
