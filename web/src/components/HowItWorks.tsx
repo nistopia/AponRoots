@@ -157,13 +157,14 @@ export function HowItWorks() {
   }, [index, paused]);
 
   const step = STEPS[index];
+  const next = () => setIndex((i) => (i + 1) % STEPS.length);
+  const prev = () => setIndex((i) => (i - 1 + STEPS.length) % STEPS.length);
 
   return (
     <div
       className="rounded-xl border border-stone-200 bg-gradient-to-br from-emerald-50 to-stone-50 p-6 shadow-sm"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
-      onTouchStart={() => setPaused(true)}
     >
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-emerald-700">
@@ -174,12 +175,47 @@ export function HowItWorks() {
         </span>
       </div>
 
-      {/* Visual */}
-      <div
-        key={index}
-        className="mb-4 flex min-h-[140px] animate-fade items-center justify-center"
-      >
-        {step.visual}
+      {/* Visual + arrows */}
+      <div className="relative mb-4 flex min-h-[160px] items-center justify-center">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setPaused(true);
+            prev();
+          }}
+          aria-label="Previous step"
+          className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-stone-600 shadow-sm hover:bg-white hover:text-emerald-700"
+        >
+          ‹
+        </button>
+
+        <div
+          key={index}
+          onClick={(e) => {
+            e.stopPropagation();
+            setPaused(true);
+            next();
+          }}
+          className="flex animate-fade cursor-pointer items-center justify-center px-10"
+          role="button"
+          tabIndex={0}
+        >
+          {step.visual}
+        </div>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setPaused(true);
+            next();
+          }}
+          aria-label="Next step"
+          className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-stone-600 shadow-sm hover:bg-white hover:text-emerald-700"
+        >
+          ›
+        </button>
       </div>
 
       {/* Caption */}
@@ -198,14 +234,29 @@ export function HowItWorks() {
         {STEPS.map((_, i) => (
           <button
             key={i}
-            onClick={() => setIndex(i)}
+            onClick={() => {
+              setPaused(true);
+              setIndex(i);
+            }}
             aria-label={`Step ${i + 1}`}
-            className={`h-1.5 rounded-full transition-all ${
-              i === index ? "w-6 bg-emerald-700" : "w-1.5 bg-stone-300"
+            className={`h-2 rounded-full transition-all ${
+              i === index ? "w-6 bg-emerald-700" : "w-2 bg-stone-300"
             }`}
           />
         ))}
       </div>
+
+      {/* Resume autoplay button when paused */}
+      {paused && (
+        <div className="mt-3 text-center">
+          <button
+            onClick={() => setPaused(false)}
+            className="text-xs text-emerald-700 hover:underline"
+          >
+            ▶ Resume autoplay
+          </button>
+        </div>
+      )}
     </div>
   );
 }
