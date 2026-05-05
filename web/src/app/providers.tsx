@@ -10,7 +10,12 @@ export function Providers({ children }: { children: ReactNode }) {
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { staleTime: 5_000, refetchOnWindowFocus: false },
+          queries: {
+            // Refetch whenever the user returns to the tab — handy when
+            // a family member edits the tree from another device.
+            refetchOnWindowFocus: true,
+            staleTime: 0,
+          },
         },
       }),
   );
