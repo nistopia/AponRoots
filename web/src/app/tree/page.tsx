@@ -154,7 +154,7 @@ function emojiFor(gender: string | undefined | null): string {
   return "👤";
 }
 
-const PERSON_GAP = 110;
+const PERSON_GAP = 150;
 
 export default function TreePage() {
   const { data: people = [], isLoading } = useQuery({
@@ -281,8 +281,8 @@ export default function TreePage() {
               const midY = (source.y + ty) / 2;
               return `M${source.x},${source.y} L${source.x},${midY} L${tx},${midY} L${tx},${ty}`;
             }}
-            separation={{ siblings: 1.6, nonSiblings: 2 }}
-            nodeSize={{ x: 260, y: 130 }}
+            separation={{ siblings: 1.4, nonSiblings: 1.8 }}
+            nodeSize={{ x: 280, y: 150 }}
             renderCustomNodeElement={({ nodeDatum }) => {
               const type = (nodeDatum.attributes?.type ?? "person") as NodeType;
               const gender = nodeDatum.attributes?.gender as string | undefined;
@@ -375,7 +375,8 @@ export default function TreePage() {
 
 /** Renders a person as an emoji + name. Returns a clickable SVG group.
  *  Uses foreignObject + HTML so the browser's full emoji rendering pipeline
- *  is used (more reliable than SVG <text> across iOS Chrome / Safari). */
+ *  is used (more reliable than SVG <text> across iOS Chrome / Safari).
+ *  The name is also rendered as HTML so long names wrap to multiple lines. */
 function personGlyph(
   x: number,
   gender: string | undefined | null,
@@ -410,23 +411,30 @@ function personGlyph(
           {emojiFor(gender)}
         </div>
       </foreignObject>
-      <text
-        x={0}
-        y={48}
-        textAnchor="middle"
-        fontSize={14}
-        fontWeight={700}
-        stroke="#ffffff"
-        strokeWidth={4}
-        paintOrder="stroke"
-        fill="#0f172a"
-        style={{
-          fontFamily: "system-ui, sans-serif",
-          userSelect: "none",
-        }}
-      >
-        {name}
-      </text>
+      {/* Name as wrapping HTML so long names break to multiple lines */}
+      <foreignObject x={-45} y={28} width={90} height={52}>
+        <div
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          {...({ xmlns: "http://www.w3.org/1999/xhtml" } as any)}
+          style={{
+            width: 90,
+            textAlign: "center",
+            fontSize: 12,
+            fontWeight: 700,
+            lineHeight: 1.15,
+            color: "#0f172a",
+            fontFamily: "system-ui, sans-serif",
+            userSelect: "none",
+            wordBreak: "break-word",
+            display: "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          {name}
+        </div>
+      </foreignObject>
     </g>
   );
 }
