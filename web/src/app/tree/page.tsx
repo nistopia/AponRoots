@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Person } from "@/lib/api";
 import { PersonAutocomplete } from "@/components/PersonAutocomplete";
+import { exportTree, type TreeExportFormat } from "@/lib/exportTree";
 
 // react-d3-tree is client-only and uses window — load dynamically.
 const Tree = dynamic(() => import("react-d3-tree"), { ssr: false });
@@ -180,6 +181,21 @@ export default function TreePage() {
   );
 
   const [rootId, setRootId] = useState<number | null>(null);
+  // Compute translate based on container width so the tree centers on mobile/desktop.
+  const [containerWidth, setContainerWidth] = useState<number>(800);
+
+  const tree =
+    rootId !== null && byId.size > 0 ? buildTree(rootId, byId) : null;
+
+  useEffect(() => {
+    const update = () => {
+      const el = document.getElementById("tree-container");
+      if (el) setContainerWidth(el.clientWidth);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [tree]);
 
   if (isLoading) return <p className="text-stone-500">Loading…</p>;
   if (people.length === 0)
@@ -193,24 +209,11 @@ export default function TreePage() {
       </p>
     );
 
-  const tree = rootId !== null ? buildTree(rootId, byId) : null;
   const rootPerson = rootId !== null ? byId.get(rootId) : null;
   const parents =
     rootPerson?.parent_ids
       .map((pid) => byId.get(pid))
       .filter((p): p is Person => !!p) ?? [];
-
-  // Compute translate based on container width so the tree centers on mobile/desktop.
-  const [containerWidth, setContainerWidth] = useState<number>(800);
-  useEffect(() => {
-    const update = () => {
-      const el = document.getElementById("tree-container");
-      if (el) setContainerWidth(el.clientWidth);
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, [tree]);
 
   return (
     <section>
@@ -249,9 +252,14 @@ export default function TreePage() {
         </div>
       )}
 
-      <p className="mb-2 text-xs text-stone-500">
-        💡 Click any person in the tree to make them the new root.
-      </p>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-stone-500">
+          💡 Click any person in the tree to make them the new root.
+        </p>
+        {tree && rootPerson && (
+          <ExportButtons rootName={rootPerson.name} />
+        )}
+      </div>
 
       <div
         id="tree-container"
@@ -431,6 +439,7 @@ function personGlyph(
               alt={name}
               width={44}
               height={44}
+              crossOrigin="anonymous"
               style={{
                 width: 44,
                 height: 44,
@@ -469,5 +478,57 @@ function personGlyph(
         </div>
       </foreignObject>
     </g>
+  );
+}
+
+function ExportButtons({ rootName }: { rootName: string }) {
+  const [busy, setBusy] = useState<TreeExportFormat | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const slug = rootName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+  const filename = `aponroots-${slug || "family-tree"}`;
+
+  const run = async (format: TreeExportFormat) => {
+    setBusy(format);
+    setError(null);
+    try {
+      await exportTree(format, filename);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => run("png")}
+        disabled={busy !== null}
+        className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+        title="Download a high-resolution PNG of the entire tree"
+      >
+        {busy === "png" ? "Exporting…" : "🖼️ PNG"}
+      </button>
+      <button
+        type="button"
+        onClick={() => run("svg")}
+        disabled={busy !== null}
+        className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+        title="Download a vector SVG — sharp at any print size"
+      >
+        {busy === "svg" ? "Exporting…" : "📄 SVG"}
+      </button>
+      {error && (
+        <span className="text-xs text-rose-600" role="alert">
+          {error}
+        </span>
+      )}
+    </div>
   );
 }
