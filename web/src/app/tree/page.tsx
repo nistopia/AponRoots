@@ -346,7 +346,9 @@ export default function TreePage() {
   );
 }
 
-/** Renders a person as an emoji + name. Returns a clickable SVG group. */
+/** Renders a person as an emoji + name. Returns a clickable SVG group.
+ *  Uses foreignObject + HTML so the browser's full emoji rendering pipeline
+ *  is used (more reliable than SVG <text> across iOS Chrome / Safari). */
 function personGlyph(
   x: number,
   gender: string | undefined | null,
@@ -359,23 +361,28 @@ function personGlyph(
       onClick={onClick}
       style={{ cursor: "pointer" }}
     >
-      {/* Invisible larger hit area so text is easy to click */}
-      <circle r={28} cx={0} cy={0} fill="transparent" />
-      <text
-        x={0}
-        y={10}
-        textAnchor="middle"
-        fontSize={36}
-        style={{
-          fontFamily:
-            '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif',
-          userSelect: "none",
-        }}
-        // dominantBaseline central makes the emoji vertically centered
-        dominantBaseline="middle"
-      >
-        {emojiFor(gender)}
-      </text>
+      {/* Hit-area + visible white background circle */}
+      <circle r={26} cx={0} cy={0} fill="#ffffff" stroke="#e7e5e4" strokeWidth={1} />
+      <foreignObject x={-22} y={-22} width={44} height={44}>
+        <div
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          {...({ xmlns: "http://www.w3.org/1999/xhtml" } as any)}
+          style={{
+            width: 44,
+            height: 44,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 30,
+            lineHeight: 1,
+            userSelect: "none",
+            fontFamily:
+              '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif',
+          }}
+        >
+          {emojiFor(gender)}
+        </div>
+      </foreignObject>
       <text
         x={0}
         y={48}
