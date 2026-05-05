@@ -27,6 +27,11 @@ class Person(Base):
     birth_date = Column(Date, nullable=True)
     death_date = Column(Date, nullable=True)
     notes = Column(String, nullable=True)
+    # Profile fields (added in v0.3)
+    photo_url = Column(String, nullable=True)
+    birthplace = Column(String, nullable=True)
+    current_location = Column(String, nullable=True)
+    occupation = Column(String, nullable=True)
 
 
 class ParentChild(Base):

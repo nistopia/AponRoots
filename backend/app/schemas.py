@@ -41,6 +41,10 @@ class PersonBase(BaseModel):
     birth_date: Optional[date] = None
     death_date: Optional[date] = None
     notes: Optional[str] = None
+    photo_url: Optional[str] = None
+    birthplace: Optional[str] = None
+    current_location: Optional[str] = None
+    occupation: Optional[str] = None
 
 
 class PersonCreate(PersonBase):
@@ -53,6 +57,10 @@ class PersonUpdate(BaseModel):
     birth_date: Optional[date] = None
     death_date: Optional[date] = None
     notes: Optional[str] = None
+    photo_url: Optional[str] = None
+    birthplace: Optional[str] = None
+    current_location: Optional[str] = None
+    occupation: Optional[str] = None
 
 
 class PersonOut(PersonBase):

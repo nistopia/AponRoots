@@ -31,16 +31,22 @@ def main(admin_email: str, admin_password: str, admin_name: str = "Admin") -> No
     Base.metadata.create_all(bind=engine)
     print("✓ Schema synced")
 
-    # 2. Add `user_id` column to `persons` if running against pre-auth DB.
+    # 2. Add new columns to `persons` table if running against an older DB.
+    PERSONS_NEW_COLS = [
+        ("user_id", "INTEGER"),
+        ("photo_url", "TEXT"),
+        ("birthplace", "TEXT"),
+        ("current_location", "TEXT"),
+        ("occupation", "TEXT"),
+    ]
     with engine.begin() as conn:
         insp = inspect(conn)
         if "persons" in insp.get_table_names():
-            cols = [c["name"] for c in insp.get_columns("persons")]
-            if "user_id" not in cols:
-                conn.execute(text("ALTER TABLE persons ADD COLUMN user_id INTEGER"))
-                print("✓ Added user_id column to persons")
-            else:
-                print("• user_id column already exists on persons")
+            existing = {c["name"] for c in insp.get_columns("persons")}
+            for col, ddl_type in PERSONS_NEW_COLS:
+                if col not in existing:
+                    conn.execute(text(f"ALTER TABLE persons ADD COLUMN {col} {ddl_type}"))
+                    print(f"✓ Added {col} column to persons")
 
     db = SessionLocal()
     try:

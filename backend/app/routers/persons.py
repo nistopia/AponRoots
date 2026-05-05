@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
@@ -26,6 +26,10 @@ def _to_out(db: Session, person: models.Person, user: models.User) -> schemas.Pe
         birth_date=person.birth_date,
         death_date=person.death_date,
         notes=person.notes,
+        photo_url=person.photo_url,
+        birthplace=person.birthplace,
+        current_location=person.current_location,
+        occupation=person.occupation,
         parent_ids=get_parents(db, person.id),
         children_ids=get_children(db, person.id),
         spouse_ids=get_spouses(db, person.id),
@@ -72,6 +76,10 @@ def create_person(
         birth_date=payload.birth_date,
         death_date=payload.death_date,
         notes=payload.notes,
+        photo_url=payload.photo_url,
+        birthplace=payload.birthplace,
+        current_location=payload.current_location,
+        occupation=payload.occupation,
     )
     db.add(person)
     db.commit()
@@ -223,3 +231,57 @@ def remove_spouse(
         raise HTTPException(404, "Spouse link not found")
     db.delete(row)
     db.commit()
+
+
+@router.post("/{person_id}/photo", response_model=schemas.PersonOut)
+async def upload_photo(
+    person_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """Upload a profile photo for a person. Replaces any existing photo."""
+    from .. import storage
+
+    person = get_writable_person(db, user, person_id)
+
+    if not storage.storage_configured():
+        raise HTTPException(503, "Photo uploads are not configured on this server")
+
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(400, "File must be an image")
+
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(400, "Empty file")
+
+    try:
+        new_url = storage.upload_person_photo(person.id, raw)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+    # Best-effort: delete the previous photo to avoid orphaned files
+    old_url = person.photo_url
+    person.photo_url = new_url
+    db.commit()
+    db.refresh(person)
+
+    storage.delete_photo_url(old_url)
+    return _to_out(db, person, user)
+
+
+@router.delete("/{person_id}/photo", response_model=schemas.PersonOut)
+def remove_photo(
+    person_id: int,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    from .. import storage
+
+    person = get_writable_person(db, user, person_id)
+    old_url = person.photo_url
+    person.photo_url = None
+    db.commit()
+    db.refresh(person)
+    storage.delete_photo_url(old_url)
+    return _to_out(db, person, user)
