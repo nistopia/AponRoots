@@ -232,6 +232,24 @@ def _bfs_blood(db: Session, start: int, max_depth: int = 12):
     return visited
 
 
+def _format_in_law_label(blood: str) -> str:
+    """Compose a grammatically correct in-law label.
+
+    For simple kinship terms ('father', 'mother', 'brother', 'sister',
+    'son', 'daughter') we append '-in-law' (e.g. 'father-in-law').
+
+    For compound terms — anything involving 'cousin', 'aunt', 'uncle',
+    'niece', 'nephew', or 'removed' — we use 'by marriage' instead, which
+    reads naturally (e.g. '1st cousin once removed by marriage')."""
+    use_by_marriage = any(
+        kw in blood
+        for kw in ("cousin", "aunt", "uncle", "niece", "nephew", "removed", "great-")
+    )
+    if use_by_marriage:
+        return f"{blood} by marriage"
+    return f"{blood}-in-law"
+
+
 def _label_for_blood_edges(edges: List[str], gender_b: Optional[str]) -> str:
     """Re-use name_relationship by extracting up_count then down_count.
     BFS-blood paths are always monotone (all parents then all children)."""
@@ -330,7 +348,7 @@ def find_in_law(
                 base = _label_for_blood_edges(y_to_b_edges, gender_b)
                 if base in ("self", ""):
                     continue
-                label = f"{base}-in-law"
+                label = _format_in_law_label(base)
                 lca_id = _find_lca_in_blood(y_to_b_path, y_to_b_edges)
                 via = "your-spouse"
             elif y_id == b_id:
@@ -340,7 +358,7 @@ def find_in_law(
                 base = _label_for_blood_edges(a_to_x_edges, gender_b)
                 if base in ("self", ""):
                     continue
-                label = f"{base}-in-law"
+                label = _format_in_law_label(base)
                 lca_id = _find_lca_in_blood(a_to_x_path, a_to_x_edges)
                 via = "their-spouse"
             else:

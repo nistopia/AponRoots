@@ -162,3 +162,32 @@ def test_blood_relationship_takes_priority_over_in_law(auth_client):
 
     assert "sister" in rel(client, headers, me, sister)
     assert "in-law" not in rel(client, headers, me, sister)
+
+
+def test_cousin_in_law_uses_by_marriage_not_dash_in_law(auth_client):
+    """Spouse's cousin should be 'first cousin by marriage', not the
+    grammatically broken 'first cousin-in-law'. Cousins-once-removed
+    likewise use 'by marriage' so we don't get 'removed-in-law'."""
+    client, headers, _ = auth_client
+
+    # Build a tree so Esha has a cousin (Priom) once removed
+    gp = make(client, headers, "GP", "M")
+    n_dad = make(client, headers, "NurulDad", "M", [gp])  # Esha's father
+    other = make(client, headers, "Other", "F", [gp])      # Esha's aunt
+    cousin = make(client, headers, "Cousin", "M", [other]) # Esha's first cousin
+    priom = make(client, headers, "Priom", "M", [cousin])  # 1st cousin once removed
+    esha = make(client, headers, "Esha", "F", [n_dad])
+
+    # Direct (blood): Esha <-> Priom = first cousin once removed
+    direct = rel(client, headers, esha, priom)
+    assert "1st cousin once removed" in direct
+    assert "in-law" not in direct
+
+    # In-law via spouse: Tanvir married to Esha; Priom is 'cousin once removed by marriage'
+    tanvir = make(client, headers, "Tanvir", "M")
+    link_spouse(client, headers, tanvir, esha)
+
+    via_marriage = rel(client, headers, tanvir, priom)
+    assert "1st cousin once removed" in via_marriage
+    assert "by marriage" in via_marriage
+    assert "removed-in-law" not in via_marriage
