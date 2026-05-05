@@ -170,12 +170,6 @@ export default function TreePage() {
 
   const [rootId, setRootId] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (rootId === null && roots.length > 0) {
-      setRootId(roots[0].id);
-    }
-  }, [rootId, roots]);
-
   if (isLoading) return <p className="text-stone-500">Loading…</p>;
   if (people.length === 0)
     return (
@@ -253,6 +247,16 @@ export default function TreePage() {
         className="rounded-lg border border-stone-200 bg-white"
         style={{ height: "70vh" }}
       >
+        {!tree && (
+          <div className="flex h-full flex-col items-center justify-center px-6 text-center text-stone-500">
+            <span className="mb-2 text-4xl" aria-hidden>
+              🌳
+            </span>
+            <p className="text-sm">
+              Type a name above to view the family tree rooted at that person.
+            </p>
+          </div>
+        )}
         {tree && (
           <Tree
             data={tree}
