@@ -259,7 +259,24 @@ export default function TreePage() {
             orientation="vertical"
             collapsible={false}
             translate={{ x: containerWidth / 2, y: 60 }}
-            pathFunc="step"
+            // Step-style elbow path, but for child nodes that are couples
+            // we shift the target x to the LEFT half so the line clearly
+            // lands on the blood-descendant (primary) emoji rather than
+            // on the heart between the couple.
+            pathFunc={(linkData) => {
+              const { source, target } = linkData;
+              const targetType = (
+                (target.data as { attributes?: { type?: string } } | null)
+                  ?.attributes?.type ?? "person"
+              ) as string;
+              const tx =
+                targetType === "couple"
+                  ? target.x - PERSON_GAP / 2
+                  : target.x;
+              const ty = target.y - 26; // stop just above the emoji
+              const midY = (source.y + ty) / 2;
+              return `M${source.x},${source.y} L${source.x},${midY} L${tx},${midY} L${tx},${ty}`;
+            }}
             separation={{ siblings: 1.6, nonSiblings: 2 }}
             nodeSize={{ x: 260, y: 130 }}
             renderCustomNodeElement={({ nodeDatum }) => {
