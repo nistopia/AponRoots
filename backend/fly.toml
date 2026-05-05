@@ -1,30 +1,32 @@
-# Fly.io config for AponRoots API.
-# Deploy with `fly deploy` from the backend/ directory.
+# fly.toml app configuration file generated for aponroots-api on 2026-05-03T23:22:24-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "aponroots-api"
-primary_region = "sjc"
+app = 'aponroots-api'
+primary_region = 'sjc'
 
 [build]
 
-[mounts]
-  source = "aponroots_data"
-  destination = "/data"
+[[mounts]]
+  source = 'aponroots_data'
+  destination = '/data'
 
 [http_service]
   internal_port = 8000
   force_https = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
-  processes = ["app"]
+  processes = ['app']
 
-[[http_service.checks]]
-  grace_period = "10s"
-  interval = "30s"
-  method = "GET"
-  timeout = "5s"
-  path = "/"
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/'
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "256mb"
+  size = 'shared-cpu-1x'
+  memory = '256mb'

@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   description: "Build your family tree and discover every relationship.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -16,7 +21,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-stone-50 text-stone-900 antialiased">
         <Providers>
           <Header />
-          <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+          <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
         </Providers>
       </body>
     </html>

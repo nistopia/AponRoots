@@ -187,6 +187,18 @@ export default function TreePage() {
       .map((pid) => byId.get(pid))
       .filter((p): p is Person => !!p) ?? [];
 
+  // Compute translate based on container width so the tree centers on mobile/desktop.
+  const [containerWidth, setContainerWidth] = useState<number>(800);
+  useEffect(() => {
+    const update = () => {
+      const el = document.getElementById("tree-container");
+      if (el) setContainerWidth(el.clientWidth);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [tree]);
+
   return (
     <section>
       <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -238,7 +250,7 @@ export default function TreePage() {
             data={tree}
             orientation="vertical"
             collapsible={false}
-            translate={{ x: 400, y: 60 }}
+            translate={{ x: containerWidth / 2, y: 60 }}
             pathFunc="step"
             separation={{ siblings: 1.6, nonSiblings: 2 }}
             nodeSize={{ x: 260, y: 130 }}
@@ -266,20 +278,25 @@ export default function TreePage() {
                 const spouseId = spouseIdStr
                   ? parseInt(spouseIdStr, 10)
                   : null;
+                // Center the couple around x=0 so the link from above
+                // (parent->this couple) lands between them, and so the
+                // link below (this couple->child) emanates from between
+                // the two parents.
+                const halfGap = PERSON_GAP / 2;
                 return (
                   <g>
-                    {personGlyph(0, gender, nodeDatum.name, handleClick(personId))}
+                    {personGlyph(-halfGap, gender, nodeDatum.name, handleClick(personId))}
                     <line
-                      x1={22}
+                      x1={-halfGap + 22}
                       y1={0}
-                      x2={PERSON_GAP - 22}
+                      x2={halfGap - 22}
                       y2={0}
                       stroke="#9ca3af"
                       strokeWidth={2}
                       strokeDasharray="4,3"
                     />
                     <text
-                      x={PERSON_GAP / 2}
+                      x={0}
                       y={-6}
                       textAnchor="middle"
                       fontSize={16}
@@ -288,7 +305,7 @@ export default function TreePage() {
                       ♥
                     </text>
                     {personGlyph(
-                      PERSON_GAP,
+                      halfGap,
                       spouseGender,
                       spouseName,
                       handleClick(spouseId),
@@ -302,21 +319,12 @@ export default function TreePage() {
                   <g>
                     <text
                       x={0}
-                      y={-30}
+                      y={-26}
                       textAnchor="middle"
-                      fontSize={16}
+                      fontSize={18}
                       fill="#dc2626"
                     >
                       ♥
-                    </text>
-                    <text
-                      x={0}
-                      y={-16}
-                      textAnchor="middle"
-                      fontSize={10}
-                      fill="#9ca3af"
-                    >
-                      also married
                     </text>
                     {personGlyph(0, gender, nodeDatum.name, handleClick(personId))}
                   </g>
@@ -330,8 +338,7 @@ export default function TreePage() {
       </div>
 
       <p className="mt-3 text-xs text-stone-500">
-        👨 Male · 👩 Female · 🧑 Other / unset · ♥ link = spouse · &ldquo;also
-        married&rdquo; = additional marriage of the parent above
+        👨 Male · 👩 Female · 🧑 Other / unset · ♥ link = spouse
       </p>
     </section>
   );
