@@ -22,7 +22,12 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const PUBLIC_ROUTES = ["/login", "/signup"];
+// "/" is public so logged-out users see the landing page.
+const PUBLIC_ROUTES = ["/", "/login", "/signup", "/about"];
+// These routes redirect authenticated users INTO the app. The marketing
+// landing at "/" stays accessible to logged-in users too (it then
+// renders the family list itself).
+const REDIRECT_AUTHED_AWAY_FROM = ["/login", "/signup"];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -54,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isPublic = PUBLIC_ROUTES.includes(pathname);
     if (!user && !isPublic) {
       router.replace("/login");
-    } else if (user && isPublic) {
+    } else if (user && REDIRECT_AUTHED_AWAY_FROM.includes(pathname)) {
       router.replace("/");
     }
   }, [loading, user, pathname, router]);
@@ -92,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
-    router.replace("/login");
+    router.replace("/");
   }, [router]);
 
   return (

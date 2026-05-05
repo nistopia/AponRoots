@@ -4,8 +4,21 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Person } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { Landing } from "@/components/Landing";
 
 export default function PeoplePage() {
+  const { user, loading: authLoading } = useAuth();
+
+  // While auth state hydrates, show nothing (the auth provider also
+  // renders the proper page when ready).
+  if (authLoading) return null;
+  if (!user) return <Landing />;
+
+  return <FamilyList />;
+}
+
+function FamilyList() {
   const qc = useQueryClient();
 
   // Home shows only the logged-in user's own entries.
@@ -13,8 +26,6 @@ export default function PeoplePage() {
     queryKey: ["persons", "mine"],
     queryFn: () => api.listPersons(true),
   });
-  // We still need the full directory so we can render names of related
-  // people who may belong to other users (parents, spouses, children).
   const { data: allPeople = [] } = useQuery({
     queryKey: ["persons", "all"],
     queryFn: () => api.listPersons(false),

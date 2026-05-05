@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
-import { HowItWorks } from "@/components/HowItWorks";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -91,8 +90,7 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto mt-4 grid max-w-5xl gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:mt-8">
-      {/* Auth card */}
+    <div className="mx-auto mt-8 max-w-md">
       <div className="rounded-xl border border-stone-200 bg-white p-8 shadow-sm">
         <h1 className="mb-1 text-2xl font-semibold text-stone-900">
           🌳 AponRoots
@@ -103,8 +101,11 @@ export function AuthShell({
         <h2 className="mb-6 text-lg text-stone-600">{title}</h2>
         {children}
       </div>
-      {/* Tour */}
-      <HowItWorks />
+      <p className="mt-4 text-center text-xs text-stone-500">
+        <a href="/" className="hover:text-emerald-700 hover:underline">
+          ← About AponRoots
+        </a>
+      </p>
     </div>
   );
 }
