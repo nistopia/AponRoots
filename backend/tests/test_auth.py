@@ -47,7 +47,7 @@ def _signup(client, email):
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
-def test_all_users_can_read_each_others_data(client):
+def test_admin_sees_everyones_data(client):
     """In the current visibility model, every authenticated user reads all entries."""
     h_alice = _signup(client, "alice@example.com")
     h_bob = _signup(client, "bob@example.com")

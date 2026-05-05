@@ -9,7 +9,7 @@ from ..relationship import (
     get_parents, get_children, get_spouses, ancestors_with_depth,
 )
 from ..scope import (
-    scope_persons_read,
+    get_user_network_ids,
     get_visible_person,
     get_writable_person,
     can_write_person,
@@ -41,8 +41,11 @@ def search_persons(
     user: models.User = Depends(get_current_user),
 ):
     query = db.query(models.Person)
-    if mine:
-        query = query.filter(models.Person.user_id == user.id)
+    if mine and not user.is_admin:
+        network = get_user_network_ids(db, user)
+        if not network:
+            return []
+        query = query.filter(models.Person.id.in_(network))
     if q.strip():
         query = query.filter(models.Person.name.ilike(f"%{q.strip()}%"))
     rows = query.order_by(models.Person.name).limit(limit).all()
@@ -87,8 +90,14 @@ def list_persons(
     user: models.User = Depends(get_current_user),
 ):
     query = db.query(models.Person)
-    if mine:
-        query = query.filter(models.Person.user_id == user.id)
+    # `mine=true` now means "everyone in my family network" -- entries I
+    # own plus anyone connected to them via parent/child/spouse links.
+    # Admins see everything regardless of the flag.
+    if mine and not user.is_admin:
+        network = get_user_network_ids(db, user)
+        if not network:
+            return []
+        query = query.filter(models.Person.id.in_(network))
     rows = query.order_by(models.Person.id).all()
     return [_to_out(db, p, user) for p in rows]
 
