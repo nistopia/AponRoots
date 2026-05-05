@@ -54,17 +54,34 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
     ) as [number, number[]][];
     const soloKids = byOtherParent.get(null) ?? [];
 
+    // Case 1: no spouses, no children
     if (marriages.length === 0 && soloKids.length === 0) {
       return basicPersonNode(p);
     }
 
-    if (marriages.length === 1 && soloKids.length === 0) {
-      const [spouseId, kidIds] = marriages[0];
-      const spouse = byId.get(spouseId);
-      if (spouse) rendered.add(spouseId);
-      const kids = kidIds
+    // Case 2: no spouses, just solo children
+    if (marriages.length === 0) {
+      const kids = soloKids
         .map(walk)
         .filter((k): k is TreeNode => k !== null);
+      return {
+        ...basicPersonNode(p),
+        children: kids.length > 0 ? kids : undefined,
+      };
+    }
+
+    // Case 3: exactly one spouse — render the couple at this level and
+    // hang ALL children below them (joint + any with unknown other parent).
+    if (marriages.length === 1) {
+      const [spouseId, jointKidIds] = marriages[0];
+      const spouse = byId.get(spouseId);
+      if (spouse) rendered.add(spouseId);
+
+      const allKidIds = [...jointKidIds, ...soloKids];
+      const kids = allKidIds
+        .map(walk)
+        .filter((k): k is TreeNode => k !== null);
+
       return {
         name: p.name,
         attributes: {
@@ -79,17 +96,10 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
       };
     }
 
-    if (marriages.length === 0) {
-      const kids = soloKids
-        .map(walk)
-        .filter((k): k is TreeNode => k !== null);
-      return {
-        ...basicPersonNode(p),
-        children: kids.length > 0 ? kids : undefined,
-      };
-    }
-
-    // Multiple marriages (or marriage + solo kids)
+    // Case 4: multiple marriages (with or without solo kids).
+    // Render P alone at the top, then for each marriage create a
+    // marriage_branch node so the tree clearly shows which kids came
+    // from which marriage.
     const branches: TreeNode[] = [];
 
     for (const cid of soloKids) {
@@ -117,11 +127,7 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
 
     return {
       name: p.name,
-      attributes: {
-        type: "person",
-        gender: p.gender ?? "",
-        personId: String(p.id),
-      },
+      attributes: { type: "person", gender: p.gender ?? "" , personId: String(p.id) },
       children: branches,
     };
   };
