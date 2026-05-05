@@ -95,6 +95,9 @@ export function AuthShell({
         <h1 className="mb-1 text-2xl font-semibold text-stone-900">
           🌳 AponRoots
         </h1>
+        <p className="mb-5 text-sm italic text-emerald-700">
+          Trace the roots, cherish the bonds.
+        </p>
         <h2 className="mb-6 text-lg text-stone-600">{title}</h2>
         {children}
       </div>
