@@ -16,9 +16,11 @@ interface TreeNode {
   attributes?: {
     type?: NodeType;
     gender?: string;
+    photoUrl?: string;
     personId?: string;
     spouseName?: string;
     spouseGender?: string;
+    spousePhotoUrl?: string;
     spouseId?: string;
   };
   children?: TreeNode[];
@@ -87,9 +89,11 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
         attributes: {
           type: "couple",
           gender: p.gender ?? "",
+          photoUrl: p.photo_url ?? "",
           personId: String(p.id),
           spouseName: spouse?.name ?? "",
           spouseGender: spouse?.gender ?? "",
+          spousePhotoUrl: spouse?.photo_url ?? "",
           spouseId: spouse ? String(spouse.id) : "",
         },
         children: kids.length > 0 ? kids : undefined,
@@ -119,6 +123,7 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
         attributes: {
           type: "marriage_branch",
           gender: spouse.gender ?? "",
+          photoUrl: spouse.photo_url ?? "",
           personId: String(spouse.id),
         },
         children: kids.length > 0 ? kids : undefined,
@@ -127,7 +132,12 @@ function buildTree(rootId: number, byId: Map<number, Person>): TreeNode | null {
 
     return {
       name: p.name,
-      attributes: { type: "person", gender: p.gender ?? "" , personId: String(p.id) },
+      attributes: {
+        type: "person",
+        gender: p.gender ?? "",
+        photoUrl: p.photo_url ?? "",
+        personId: String(p.id),
+      },
       children: branches,
     };
   };
@@ -141,6 +151,7 @@ function basicPersonNode(p: Person): TreeNode {
     attributes: {
       type: "person",
       gender: p.gender ?? "",
+      photoUrl: p.photo_url ?? "",
       personId: String(p.id),
     },
   };
@@ -301,20 +312,19 @@ export default function TreePage() {
                 const spouseGender = nodeDatum.attributes?.spouseGender as
                   | string
                   | undefined;
+                const spousePhotoUrl = (nodeDatum.attributes?.spousePhotoUrl ??
+                  "") as string;
                 const spouseIdStr = nodeDatum.attributes?.spouseId as
                   | string
                   | undefined;
                 const spouseId = spouseIdStr
                   ? parseInt(spouseIdStr, 10)
                   : null;
-                // Center the couple around x=0 so the link from above
-                // (parent->this couple) lands between them, and so the
-                // link below (this couple->child) emanates from between
-                // the two parents.
+                const photoUrl = (nodeDatum.attributes?.photoUrl ?? "") as string;
                 const halfGap = PERSON_GAP / 2;
                 return (
                   <g>
-                    {personGlyph(-halfGap, gender, nodeDatum.name, handleClick(personId))}
+                    {personGlyph(-halfGap, gender, photoUrl, nodeDatum.name, handleClick(personId))}
                     <line
                       x1={-halfGap + 22}
                       y1={0}
@@ -336,6 +346,7 @@ export default function TreePage() {
                     {personGlyph(
                       halfGap,
                       spouseGender,
+                      spousePhotoUrl,
                       spouseName,
                       handleClick(spouseId),
                     )}
@@ -344,6 +355,7 @@ export default function TreePage() {
               }
 
               if (type === "marriage_branch") {
+                const photoUrl = (nodeDatum.attributes?.photoUrl ?? "") as string;
                 return (
                   <g>
                     <text
@@ -355,12 +367,13 @@ export default function TreePage() {
                     >
                       ♥
                     </text>
-                    {personGlyph(0, gender, nodeDatum.name, handleClick(personId))}
+                    {personGlyph(0, gender, photoUrl, nodeDatum.name, handleClick(personId))}
                   </g>
                 );
               }
 
-              return personGlyph(0, gender, nodeDatum.name, handleClick(personId));
+              const photoUrl = (nodeDatum.attributes?.photoUrl ?? "") as string;
+              return personGlyph(0, gender, photoUrl, nodeDatum.name, handleClick(personId));
             }}
           />
         )}
@@ -373,23 +386,24 @@ export default function TreePage() {
   );
 }
 
-/** Renders a person as an emoji + name. Returns a clickable SVG group.
- *  Uses foreignObject + HTML so the browser's full emoji rendering pipeline
- *  is used (more reliable than SVG <text> across iOS Chrome / Safari).
- *  The name is also rendered as HTML so long names wrap to multiple lines. */
+/** Renders a person as a photo (if available) or emoji + name.
+ *  Uses foreignObject + HTML so the browser's full image / emoji rendering
+ *  pipeline is used (more reliable than SVG <text> across iOS Chrome / Safari). */
 function personGlyph(
   x: number,
   gender: string | undefined | null,
+  photoUrl: string | null | undefined,
   name: string,
   onClick: () => void,
 ) {
+  const hasPhoto = !!photoUrl;
   return (
     <g
       transform={`translate(${x}, 0)`}
       onClick={onClick}
       style={{ cursor: "pointer" }}
     >
-      {/* Hit-area + visible white background circle */}
+      {/* Visible white background circle that doubles as the hit area */}
       <circle r={26} cx={0} cy={0} fill="#ffffff" stroke="#e7e5e4" strokeWidth={1} />
       <foreignObject x={-22} y={-22} width={44} height={44}>
         <div
@@ -404,11 +418,30 @@ function personGlyph(
             fontSize: 30,
             lineHeight: 1,
             userSelect: "none",
+            overflow: "hidden",
+            borderRadius: "50%",
             fontFamily:
               '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif',
           }}
         >
-          {emojiFor(gender)}
+          {hasPhoto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photoUrl as string}
+              alt={name}
+              width={44}
+              height={44}
+              style={{
+                width: 44,
+                height: 44,
+                objectFit: "cover",
+                borderRadius: "50%",
+                display: "block",
+              }}
+            />
+          ) : (
+            emojiFor(gender)
+          )}
         </div>
       </foreignObject>
       {/* Name as wrapping HTML so long names break to multiple lines */}
