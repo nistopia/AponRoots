@@ -143,7 +143,9 @@ function basicPersonNode(p: Person): TreeNode {
 function emojiFor(gender: string | undefined | null): string {
   if (gender === "F") return "👩";
   if (gender === "M") return "👨";
-  return "🧑";
+  // 🧑 (person) renders inconsistently across platforms — sometimes a
+  // featureless ring on iOS Safari. Use a clearly visible bust silhouette.
+  return "👤";
 }
 
 const PERSON_GAP = 110;
@@ -228,7 +230,7 @@ export default function TreePage() {
               className="inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white px-3 py-1 text-sm text-stone-800 shadow-sm hover:border-emerald-500 hover:bg-emerald-50"
             >
               <span aria-hidden>
-                {p.gender === "F" ? "👩" : p.gender === "M" ? "👨" : "🧑"}
+                {p.gender === "F" ? "👩" : p.gender === "M" ? "👨" : "👤"}
               </span>
               {p.name}
             </button>
@@ -338,7 +340,7 @@ export default function TreePage() {
       </div>
 
       <p className="mt-3 text-xs text-stone-500">
-        👨 Male · 👩 Female · 🧑 Other / unset · ♥ link = spouse
+        👨 Male · 👩 Female · 👤 Other / unset · ♥ link = spouse
       </p>
     </section>
   );

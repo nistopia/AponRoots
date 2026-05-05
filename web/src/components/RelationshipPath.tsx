@@ -163,7 +163,7 @@ function PersonChip({ step }: { step: Step }) {
   const fill = colorFor(step.gender);
   const isFemale = step.gender === "F";
   const isMale = step.gender === "M";
-  const personEmoji = isFemale ? "👩" : isMale ? "👨" : "🧑";
+  const personEmoji = isFemale ? "👩" : isMale ? "👨" : "👤";
 
   return (
     <div
