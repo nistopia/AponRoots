@@ -368,9 +368,11 @@ function personGlyph(
         fontSize={36}
         style={{
           fontFamily:
-            '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+            '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif',
           userSelect: "none",
         }}
+        // dominantBaseline central makes the emoji vertically centered
+        dominantBaseline="middle"
       >
         {emojiFor(gender)}
       </text>
