@@ -17,7 +17,7 @@ const STEPS: Step[] = [
     visual: (
       <MockCard>
         <span className="text-3xl">👨</span>
-        <span className="font-semibold">Arjun</span>
+        <span className="font-semibold">Tanvir</span>
       </MockCard>
     ),
   },
@@ -30,18 +30,18 @@ const STEPS: Step[] = [
         <div className="flex items-center gap-3">
           <MockCard>
             <span className="text-2xl">👨</span>
-            <span className="text-xs font-semibold">Vikram</span>
+            <span className="text-xs font-semibold">Faruk</span>
           </MockCard>
           <span className="text-rose-500">♥</span>
           <MockCard>
             <span className="text-2xl">👩</span>
-            <span className="text-xs font-semibold">Lakshmi</span>
+            <span className="text-xs font-semibold">Roksana</span>
           </MockCard>
         </div>
         <span className="text-stone-300">│</span>
         <MockCard>
           <span className="text-2xl">👨</span>
-          <span className="text-xs font-semibold">Arjun</span>
+          <span className="text-xs font-semibold">Tanvir</span>
         </MockCard>
       </div>
     ),
@@ -54,12 +54,12 @@ const STEPS: Step[] = [
       <div className="flex items-center gap-3">
         <MockCard>
           <span className="text-3xl">👨</span>
-          <span className="text-xs font-semibold">Arjun</span>
+          <span className="text-xs font-semibold">Tanvir</span>
         </MockCard>
         <span className="text-2xl text-rose-500">♥</span>
         <MockCard>
           <span className="text-3xl">👩</span>
-          <span className="text-xs font-semibold">Priya</span>
+          <span className="text-xs font-semibold">Emma</span>
         </MockCard>
       </div>
     ),
@@ -73,23 +73,23 @@ const STEPS: Step[] = [
         <div className="flex items-center gap-3">
           <MockCard>
             <span className="text-2xl">👨</span>
-            <span className="text-[10px] font-semibold">Arjun</span>
+            <span className="text-[10px] font-semibold">Tanvir</span>
           </MockCard>
           <span className="text-rose-500">♥</span>
           <MockCard>
             <span className="text-2xl">👩</span>
-            <span className="text-[10px] font-semibold">Priya</span>
+            <span className="text-[10px] font-semibold">Emma</span>
           </MockCard>
         </div>
         <span className="text-stone-300">│</span>
         <div className="flex items-center gap-2">
           <MockCard>
             <span className="text-xl">👦</span>
-            <span className="text-[10px] font-semibold">Rohan</span>
+            <span className="text-[10px] font-semibold">Liam</span>
           </MockCard>
           <MockCard>
             <span className="text-xl">👧</span>
-            <span className="text-[10px] font-semibold">Maya</span>
+            <span className="text-[10px] font-semibold">Sadia</span>
           </MockCard>
         </div>
       </div>
@@ -104,12 +104,12 @@ const STEPS: Step[] = [
         <div className="flex items-center gap-3">
           <MockCard>
             <span className="text-2xl">👩</span>
-            <span className="text-[10px] font-semibold">Maya</span>
+            <span className="text-[10px] font-semibold">Sadia</span>
           </MockCard>
           <span className="text-stone-400">↔</span>
           <MockCard>
             <span className="text-2xl">👨</span>
-            <span className="text-[10px] font-semibold">Karan</span>
+            <span className="text-[10px] font-semibold">Noah</span>
           </MockCard>
         </div>
         <span className="mt-2 rounded bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">
