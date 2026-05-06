@@ -64,12 +64,23 @@ people can have the exact same name.
 
 ## 🔐 Authorization Model (`backend/app/scope.py`)
 
-- **READ**: any authenticated user can read any person.
-- **WRITE**: only owner (`Person.user_id == user.id`) or admin.
+- **READ**: any authenticated user can read any person — the family
+  network is intentionally non-private within AponRoots, on the
+  assumption that family data sharing is the whole point.
+- **WRITE**: owner, admin, or **subtree grantee** (see below).
 - **`/persons?mine=true`** returns the user's *family network* — entries
-  they own PLUS everyone reachable via parent/child/spouse BFS. So in-laws
-  added by another account auto-appear once they're connected.
-- `PersonOut` includes `owner_id` and `can_edit` (computed per request).
+  they own PLUS everyone reachable via parent/child/spouse BFS, PLUS
+  every grant-writable subtree (root + descendants), all combined and
+  BFS-expanded. The expansion is deliberately wide so owners see in-laws
+  added by another account, and grantees see the family context around
+  their granted subtree (not just an isolated branch).
+- **Subtree grants** (`SubtreeGrant`): owner or admin can share write
+  access on a person + all of their blood descendants. Dynamic — new
+  descendants auto-included. Grantees CANNOT re-share. See
+  `aponroots-relationships` skill for resolver details.
+- `PersonOut` includes `owner_id` and `can_edit` (computed per request,
+  with grant-writable IDs precomputed once per list endpoint to avoid
+  N queries).
 
 ---
 
