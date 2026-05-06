@@ -27,6 +27,7 @@ delete).
 | Status | Item | Notes |
 |--------|------|-------|
 | 🟢 | **Birthday widget** | Home page card: "🎂 Upcoming birthdays this week / month". Compute from `birth` field, ignore year. Sort by next occurrence. |
+| 🟡 | **Restrict read access to family network** | Today: any authenticated user reads any person. Considered design choice — sharing is the point. But some users may want narrower read access (e.g. a grantee should only see the granted subtree + their own network, not every person in the system). Would need a `can_view` field, listing filters in `/persons` and `/persons/search`, profile-page guards, and a decision on what to do with the relationship resolver (it currently lets you compare *any* two persons). Surfaced after first real-user feedback that this felt too open. |
 | 🟡 | **Stories / memories per person** | Long-form notes, photos, dates pinned to a person. Visibility scope: family-wide vs owner-only? Comment threads? Decide before building. |
 | 🟡 | **GEDCOM export** | Industry-standard `.ged` so users can import their tree into Ancestry / FamilySearch / etc. Probably easier than import. Start here. |
 | 🟡 | **GEDCOM import** | Parse `.ged`, map to persons + relationships, dedupe against existing tree. Date format quirks ("ABT 1950", "BEF 1950"). Owner = importing user. |
