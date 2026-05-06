@@ -64,6 +64,24 @@ export async function exportTree(
   bg.setAttribute("fill", "#ffffff");
   svg.insertBefore(bg, svg.firstChild);
 
+  // react-d3-tree's link <path> elements are open polylines (M…L…L…L). When
+  // SVG fills an open path it implicitly closes it, producing a filled
+  // polygon. The live page hides this via CSS (fill: none) but those styles
+  // don't carry into a standalone SVG file or the html-to-image rasterizer.
+  // Force fill: none + a visible stroke on every path so links render as
+  // thin lines in the export.
+  svg.querySelectorAll("path").forEach((p) => {
+    if (!p.hasAttribute("fill") || p.getAttribute("fill") === "") {
+      p.setAttribute("fill", "none");
+    }
+    if (!p.hasAttribute("stroke") || p.getAttribute("stroke") === "") {
+      p.setAttribute("stroke", "#94a3b8");
+    }
+    if (!p.hasAttribute("stroke-width")) {
+      p.setAttribute("stroke-width", "1.5");
+    }
+  });
+
   // Inline R2 photos as data URLs (self-contained file + no canvas taint).
   await inlineImages(svg);
 
