@@ -240,3 +240,52 @@ def test_grantee_can_add_child_to_subtree_member(client):
 
     r = client.patch(f"/persons/{bobs_kid}", json={"notes": "hi"}, headers=_auth(bob_token))
     assert r.status_code == 200
+
+
+def test_grantee_sees_subtree_in_mine_listing(client):
+    """A grantee with no owned entries should see the granted subtree
+    (and its connected network) when listing /persons?mine=true."""
+    alice_token, _ = _signup(client, "alice@example.com")
+    bob_token, _ = _signup(client, "bob@example.com")
+
+    grandma = _create_person(client, alice_token, "Grandma")
+    mom = _create_person(client, alice_token, "Mom", parent_ids=[grandma])
+    me = _create_person(client, alice_token, "Me", parent_ids=[mom])
+    kid = _create_person(client, alice_token, "Kid", parent_ids=[me])
+    uncle = _create_person(client, alice_token, "Uncle", parent_ids=[grandma])
+
+    # Bob's home page is empty before any grant
+    r = client.get("/persons?mine=true", headers=_auth(bob_token))
+    assert r.status_code == 200
+    assert r.json() == []
+
+    # Alice grants Bob access to Mom's subtree
+    client.post(
+        f"/persons/{mom}/grants",
+        json={"grantee_email": "bob@example.com"},
+        headers=_auth(alice_token),
+    )
+
+    # Bob's home page now includes Mom + descendants. The BFS through
+    # parent/spouse edges expands the network further: Grandma (Mom's
+    # parent) is reachable via Mom -> parent edge, and Uncle is reachable
+    # via Grandma -> child edge. This matches existing owner-network
+    # behavior — once you're "in" someone's branch, you see the people
+    # connected to them.
+    r = client.get("/persons?mine=true", headers=_auth(bob_token))
+    assert r.status_code == 200
+    ids = {p["id"] for p in r.json()}
+    assert mom in ids
+    assert me in ids
+    assert kid in ids
+    # Connected network expansion
+    assert grandma in ids
+    assert uncle in ids
+
+    # can_edit on listing reflects grant scope: only mom, me, kid editable
+    by_id = {p["id"]: p for p in r.json()}
+    assert by_id[mom]["can_edit"] is True
+    assert by_id[me]["can_edit"] is True
+    assert by_id[kid]["can_edit"] is True
+    assert by_id[grandma]["can_edit"] is False
+    assert by_id[uncle]["can_edit"] is False

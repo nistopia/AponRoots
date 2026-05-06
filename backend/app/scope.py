@@ -96,18 +96,26 @@ def get_writable_person(db: Session, user: models.User, person_id: int) -> model
 
 
 def get_user_network_ids(db: Session, user: models.User) -> Set[int]:
-    """Returns ids of every Person reachable from entries owned by `user` via
-    parent/child/spouse links (the user's "family network").
+    """Returns ids of every Person reachable from the user's "starting points"
+    via parent/child/spouse links — their family network for the home page.
 
-    Even people authored by other users count as long as they're connected to
-    something the user owns. Useful for the home page so a user sees their
-    in-laws (added by their spouse from another account)."""
-    seed_ids = {
+    Starting points include:
+      - persons owned by the user, AND
+      - persons the user has edit access to via SubtreeGrants (the grant
+        roots and all of their blood descendants).
+
+    Without including grants, a user who hasn't created any entries but
+    was invited to edit someone else's branch would see an empty home
+    page and have no way to find the people they can actually edit.
+    """
+    owned_ids = {
         pid
         for (pid,) in db.query(models.Person.id)
         .filter(models.Person.user_id == user.id)
         .all()
     }
+    grant_ids = get_grant_writable_ids(db, user)
+    seed_ids = owned_ids | grant_ids
     if not seed_ids:
         return set()
 
