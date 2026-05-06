@@ -19,13 +19,13 @@ delete).
 | Status | Item | Notes |
 |--------|------|-------|
 | 🔥 | **Configure R2 bucket CORS** | Required for photos in exported tree PNGs/SVGs. Allow GET from `https://aponroots.com`, `https://www.aponroots.com`, `http://localhost:3000`. Cloudflare Dashboard → R2 → `aponroots-photos` → Settings → CORS Policy. |
-| 🔥 | **Change admin password** | `nistopia@gmail.com` still on bootstrap password `Nis44haT##` — needs a Change Password page (see below) or a one-off `fly ssh` script. |
+| 🔥 | **Set Fly SMTP secrets** | Without `SMTP_HOST` / `SMTP_USER` / `SMTP_PASSWORD` / `EMAIL_FROM`, password-reset emails are logged but not sent. Use `fly secrets set -a aponroots-api ...`. |
+| 🔥 | **Change admin password via /account/password** | `nistopia@gmail.com` still on bootstrap password `Nis44haT##`. Now self-serve via the new Change Password page. |
 
 ## Features
 
 | Status | Item | Notes |
 |--------|------|-------|
-| 🟢 | **Change Password page** | `/account/password` with old + new + confirm; backend `PUT /me/password`. Required to retire the bootstrap admin password. |
 | 🟢 | **Birthday widget** | Home page card: "🎂 Upcoming birthdays this week / month". Compute from `birth` field, ignore year. Sort by next occurrence. |
 | 🟡 | **Stories / memories per person** | Long-form notes, photos, dates pinned to a person. Visibility scope: family-wide vs owner-only? Comment threads? Decide before building. |
 | 🟡 | **Per-entry edit sharing** | Today: only the owner (or admin) can edit a person. Want: owner can grant edit access to specific other users for specific persons. Needs a `person_collaborators` table + UI. |
@@ -48,7 +48,7 @@ delete).
 
 | Status | Item | Notes |
 |--------|------|-------|
-| 🟢 | **Forgot Password / reset email** | Link in email → token-based reset page. Needs SMTP config in Fly secrets. |
+| 🟢 | **Forgot Password / reset email** | Done — endpoints + pages live. SMTP secrets still needed to actually deliver email; otherwise links surface in `fly logs`. |
 | 🟡 | **Profile editing** | Display name, avatar, account email change. |
 | 🟡 | **Admin user list page** | `/admin/users` with role toggle, deactivate, see last login. Admin-only route. |
 
@@ -72,6 +72,7 @@ delete).
 
 For full history see `git log --oneline`. Recent highlights:
 
+- ✅ Change Password / Forgot Password / Reset Password flows
 - ✅ High-res PNG / SVG tree export (full tree, not just viewport)
 - ✅ Tree click-to-reroot + up-arrow to parents
 - ✅ Couple nodes with custom descending-link routing to blood parent
