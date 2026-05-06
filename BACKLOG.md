@@ -28,7 +28,6 @@ delete).
 |--------|------|-------|
 | 🟢 | **Birthday widget** | Home page card: "🎂 Upcoming birthdays this week / month". Compute from `birth` field, ignore year. Sort by next occurrence. |
 | 🟡 | **Stories / memories per person** | Long-form notes, photos, dates pinned to a person. Visibility scope: family-wide vs owner-only? Comment threads? Decide before building. |
-| 🟡 | **Per-entry edit sharing** | Today: only the owner (or admin) can edit a person. Want: owner can grant edit access to specific other users for specific persons. Needs a `person_collaborators` table + UI. |
 | 🟡 | **GEDCOM export** | Industry-standard `.ged` so users can import their tree into Ancestry / FamilySearch / etc. Probably easier than import. Start here. |
 | 🟡 | **GEDCOM import** | Parse `.ged`, map to persons + relationships, dedupe against existing tree. Date format quirks ("ABT 1950", "BEF 1950"). Owner = importing user. |
 | 💤 | **Bangla UI translation** | Two layers: (1) static UI strings via i18n; (2) computed relationship labels in Bangla — much harder, need a structural relationship → Bangla label mapper that handles paternal/maternal distinction (chacha/mama, fufu/khala, etc.). |
@@ -72,6 +71,7 @@ delete).
 
 For full history see `git log --oneline`. Recent highlights:
 
+- ✅ Subtree edit sharing (grant edit on a person + all their blood descendants, dynamic + revocable)
 - ✅ Change Password / Forgot Password / Reset Password flows
 - ✅ High-res PNG / SVG tree export (full tree, not just viewport)
 - ✅ Tree click-to-reroot + up-arrow to parents
