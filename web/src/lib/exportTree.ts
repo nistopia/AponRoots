@@ -106,12 +106,17 @@ async function inlineImages(svg: SVGSVGElement): Promise<void> {
         const dataUrl = await blobToDataUrl(blob);
         img.setAttribute("src", dataUrl);
       } catch {
-        // CORS or network failure — strip the broken photo so the canvas
-        // isn't tainted. The person's name is still in the export via the
-        // second foreignObject in personGlyph.
-        img.removeAttribute("src");
+        // CORS or network failure — replace the broken photo with the
+        // gender emoji so the node still has a visible glyph (matches the
+        // page's no-photo fallback). data-gender is set in personGlyph.
+        const gender = img.getAttribute("data-gender") ?? "";
+        const emoji = gender === "F" ? "👩" : gender === "M" ? "👨" : "👤";
         const parent = img.parentElement;
-        if (parent) parent.removeChild(img);
+        if (parent) {
+          parent.replaceChild(document.createTextNode(emoji), img);
+        } else {
+          img.removeAttribute("src");
+        }
       }
     }),
   );

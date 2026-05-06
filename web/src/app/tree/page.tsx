@@ -440,6 +440,7 @@ function personGlyph(
               width={44}
               height={44}
               crossOrigin="anonymous"
+              data-gender={gender ?? ""}
               style={{
                 width: 44,
                 height: 44,
