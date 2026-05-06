@@ -57,9 +57,10 @@ export function SharingSection({ personId, personName }: Props) {
     <section className="mt-8 rounded-lg border border-stone-200 bg-white p-5">
       <h2 className="mb-1 font-semibold text-stone-900">Sharing</h2>
       <p className="mb-4 text-sm text-stone-600">
-        People you add here can edit <strong>{personName}</strong> and all of
-        their blood descendants. They can&apos;t re-share or delete your
-        account.
+        People you add here can edit{" "}
+        <strong>{personName}</strong>
+        {" "}and all of their blood descendants. They can&apos;t re-share or
+        delete your account.
       </p>
 
       <form onSubmit={onAdd} className="mb-4 flex flex-wrap items-stretch gap-2">
