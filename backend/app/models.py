@@ -17,6 +17,19 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
+class PasswordResetToken(Base):
+    """One-time password reset tokens. Stores a sha256 hash, never the raw token."""
+
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash = Column(String, nullable=False, unique=True, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class Person(Base):
     __tablename__ = "persons"
 

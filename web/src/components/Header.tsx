@@ -36,7 +36,13 @@ export function Header() {
               <div className="flex items-center gap-3 border-l border-stone-200 pl-5">
                 <div className="text-right">
                   <p className="text-sm font-medium text-stone-900">
-                    {user.name || user.email}
+                    <Link
+                      href="/account/password"
+                      className="hover:text-emerald-700 hover:underline"
+                      title="Account settings"
+                    >
+                      {user.name || user.email}
+                    </Link>
                     {user.is_admin && (
                       <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-800">
                         ADMIN
@@ -75,6 +81,13 @@ export function Header() {
           </div>
           <nav className="flex flex-col gap-3 text-base font-medium text-stone-700">
             {navLinks}
+            <Link
+              href="/account/password"
+              className="hover:text-emerald-700"
+              onClick={() => setMenuOpen(false)}
+            >
+              Change password
+            </Link>
           </nav>
           <div className="mt-4 flex items-center justify-between border-t border-stone-200 pt-3">
             <p className="text-sm text-stone-700">

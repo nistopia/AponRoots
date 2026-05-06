@@ -78,6 +78,14 @@ export default function LoginPage() {
           Sign up
         </Link>
       </p>
+      <p className="mt-2 text-center text-sm text-stone-600">
+        <Link
+          href="/forgot-password"
+          className="text-stone-500 hover:text-emerald-700 hover:underline"
+        >
+          Forgot password?
+        </Link>
+      </p>
     </AuthShell>
   );
 }
@@ -102,9 +110,9 @@ export function AuthShell({
         {children}
       </div>
       <p className="mt-4 text-center text-xs text-stone-500">
-        <a href="/" className="hover:text-emerald-700 hover:underline">
+        <Link href="/" className="hover:text-emerald-700 hover:underline">
           ← About AponRoots
-        </a>
+        </Link>
       </p>
     </div>
   );

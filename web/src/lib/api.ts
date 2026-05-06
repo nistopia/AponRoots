@@ -122,6 +122,24 @@ export const api = {
       body: JSON.stringify({ credential }),
     }),
   me: () => request<User>("/auth/me"),
+  changePassword: (oldPassword: string, newPassword: string) =>
+    request<{ detail: string }>("/auth/me/password", {
+      method: "PUT",
+      body: JSON.stringify({
+        old_password: oldPassword,
+        new_password: newPassword,
+      }),
+    }),
+  forgotPassword: (email: string) =>
+    request<{ detail: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (token: string, newPassword: string) =>
+    request<AuthResponse>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, new_password: newPassword }),
+    }),
 
   // People
   listPersons: (mine = false) =>
