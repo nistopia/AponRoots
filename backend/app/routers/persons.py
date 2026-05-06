@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,7 @@ from ..relationship import (
     get_parents, get_children, get_spouses, ancestors_with_depth,
 )
 from ..scope import (
+    get_grant_writable_ids,
     get_user_network_ids,
     get_visible_person,
     get_writable_person,
@@ -18,7 +19,15 @@ from ..scope import (
 router = APIRouter(prefix="/persons", tags=["persons"])
 
 
-def _to_out(db: Session, person: models.Person, user: models.User) -> schemas.PersonOut:
+def _to_out(
+    db: Session,
+    person: models.Person,
+    user: models.User,
+    grant_ids: Optional[set] = None,
+) -> schemas.PersonOut:
+    # Cheap fast paths first; only run the grant query if needed.
+    if grant_ids is None and not user.is_admin and person.user_id != user.id:
+        grant_ids = get_grant_writable_ids(db, user)
     return schemas.PersonOut(
         id=person.id,
         name=person.name,
@@ -34,7 +43,7 @@ def _to_out(db: Session, person: models.Person, user: models.User) -> schemas.Pe
         children_ids=get_children(db, person.id),
         spouse_ids=get_spouses(db, person.id),
         owner_id=person.user_id,
-        can_edit=can_write_person(user, person),
+        can_edit=can_write_person(user, person, grant_ids),
     )
 
 
@@ -53,7 +62,8 @@ def search_persons(
     if q.strip():
         query = query.filter(models.Person.name.ilike(f"%{q.strip()}%"))
     rows = query.order_by(models.Person.name).limit(limit).all()
-    return [_to_out(db, p, user) for p in rows]
+    grant_ids = None if user.is_admin else get_grant_writable_ids(db, user)
+    return [_to_out(db, p, user, grant_ids) for p in rows]
 
 
 @router.post("", response_model=schemas.PersonOut, status_code=201)
@@ -107,7 +117,8 @@ def list_persons(
             return []
         query = query.filter(models.Person.id.in_(network))
     rows = query.order_by(models.Person.id).all()
-    return [_to_out(db, p, user) for p in rows]
+    grant_ids = None if user.is_admin else get_grant_writable_ids(db, user)
+    return [_to_out(db, p, user, grant_ids) for p in rows]
 
 
 @router.get("/{person_id}", response_model=schemas.PersonOut)

@@ -79,6 +79,17 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface SubtreeGrant {
+  id: number;
+  root_person_id: number;
+  root_person_name: string;
+  grantee_user_id: number;
+  grantee_email: string;
+  grantee_name: string | null;
+  granted_by_user_id: number | null;
+  created_at: string;
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -139,6 +150,19 @@ export const api = {
     request<AuthResponse>("/auth/reset-password", {
       method: "POST",
       body: JSON.stringify({ token, new_password: newPassword }),
+    }),
+
+  // Subtree edit grants
+  listGrants: (personId: number) =>
+    request<SubtreeGrant[]>(`/persons/${personId}/grants`),
+  createGrant: (personId: number, granteeEmail: string) =>
+    request<SubtreeGrant>(`/persons/${personId}/grants`, {
+      method: "POST",
+      body: JSON.stringify({ grantee_email: granteeEmail }),
+    }),
+  revokeGrant: (personId: number, grantId: number) =>
+    request<void>(`/persons/${personId}/grants/${grantId}`, {
+      method: "DELETE",
     }),
 
   // People

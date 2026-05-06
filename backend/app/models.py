@@ -30,6 +30,23 @@ class PasswordResetToken(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
+class SubtreeGrant(Base):
+    """Grants `grantee_user_id` edit access to `root_person_id` and all of
+    its blood descendants (dynamic — computed via parent_child edges at
+    request time, so new descendants added later are auto-included)."""
+
+    __tablename__ = "subtree_grants"
+    __table_args__ = (
+        UniqueConstraint("root_person_id", "grantee_user_id", name="uq_grant_root_grantee"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    root_person_id = Column(Integer, ForeignKey("persons.id", ondelete="CASCADE"), nullable=False, index=True)
+    grantee_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    granted_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class Person(Base):
     __tablename__ = "persons"
 

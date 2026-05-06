@@ -51,6 +51,27 @@ class MessageResponse(BaseModel):
     detail: str
 
 
+# ---------- Subtree edit grants ----------
+
+
+class SubtreeGrantCreate(BaseModel):
+    grantee_email: EmailStr
+
+
+class SubtreeGrantOut(BaseModel):
+    id: int
+    root_person_id: int
+    root_person_name: str
+    grantee_user_id: int
+    grantee_email: EmailStr
+    grantee_name: Optional[str] = None
+    granted_by_user_id: Optional[int] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ---------- Persons ----------
 
 class PersonBase(BaseModel):

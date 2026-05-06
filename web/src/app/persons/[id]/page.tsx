@@ -4,7 +4,9 @@ import Link from "next/link";
 import { use, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Person } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { PersonAvatar } from "@/components/PersonAvatar";
+import { SharingSection } from "@/components/SharingSection";
 
 export default function PersonProfilePage({
   params,
@@ -13,6 +15,7 @@ export default function PersonProfilePage({
 }) {
   const { id } = use(params);
   const personId = Number(id);
+  const { user: currentUser } = useAuth();
 
   const { data: person, isLoading, error } = useQuery({
     queryKey: ["person", personId],
@@ -98,6 +101,12 @@ export default function PersonProfilePage({
           🌳 View family tree from here
         </Link>
       </div>
+
+      {currentUser &&
+        person.owner_id !== null &&
+        (currentUser.is_admin || currentUser.id === person.owner_id) && (
+          <SharingSection personId={person.id} personName={person.name} />
+        )}
     </article>
   );
 }
