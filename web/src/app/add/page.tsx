@@ -67,12 +67,24 @@ export default function AddPersonPage() {
         </Field>
 
         <Field label="Birth date">
-          <input
-            type="date"
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            className={inputCls}
-          />
+          <div className="flex items-stretch gap-1">
+            <input
+              type="date"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              className={`${inputCls} flex-1`}
+            />
+            {birthDate && (
+              <button
+                type="button"
+                onClick={() => setBirthDate("")}
+                title="Clear birth date"
+                className="rounded-md border border-stone-300 px-2 text-stone-500 hover:border-rose-400 hover:bg-rose-50 hover:text-rose-700"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </Field>
 
         <div className="space-y-3 rounded-lg border border-stone-200 bg-white p-4">
