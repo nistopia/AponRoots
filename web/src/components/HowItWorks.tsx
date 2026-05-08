@@ -17,7 +17,7 @@ const STEPS: Step[] = [
     visual: (
       <MockCard>
         <span className="text-3xl">👨</span>
-        <span className="font-semibold">Tanvir</span>
+        <span className="font-semibold">Zayn</span>
       </MockCard>
     ),
   },
@@ -30,18 +30,18 @@ const STEPS: Step[] = [
         <div className="flex items-center gap-3">
           <MockCard>
             <span className="text-2xl">👨</span>
-            <span className="text-xs font-semibold">Faruk</span>
+            <span className="text-xs font-semibold">Neon</span>
           </MockCard>
           <span className="text-rose-500">♥</span>
           <MockCard>
             <span className="text-2xl">👩</span>
-            <span className="text-xs font-semibold">Roksana</span>
+            <span className="text-xs font-semibold">Niomi</span>
           </MockCard>
         </div>
         <span className="text-stone-300">│</span>
         <MockCard>
           <span className="text-2xl">👨</span>
-          <span className="text-xs font-semibold">Tanvir</span>
+          <span className="text-xs font-semibold">Zayn</span>
         </MockCard>
       </div>
     ),
@@ -54,7 +54,7 @@ const STEPS: Step[] = [
       <div className="flex items-center gap-3">
         <MockCard>
           <span className="text-3xl">👨</span>
-          <span className="text-xs font-semibold">Tanvir</span>
+          <span className="text-xs font-semibold">Zayn</span>
         </MockCard>
         <span className="text-2xl text-rose-500">♥</span>
         <MockCard>
@@ -73,7 +73,7 @@ const STEPS: Step[] = [
         <div className="flex items-center gap-3">
           <MockCard>
             <span className="text-2xl">👨</span>
-            <span className="text-[10px] font-semibold">Tanvir</span>
+            <span className="text-[10px] font-semibold">Zayn</span>
           </MockCard>
           <span className="text-rose-500">♥</span>
           <MockCard>
@@ -89,7 +89,7 @@ const STEPS: Step[] = [
           </MockCard>
           <MockCard>
             <span className="text-xl">👧</span>
-            <span className="text-[10px] font-semibold">Sadia</span>
+            <span className="text-[10px] font-semibold">Fiona</span>
           </MockCard>
         </div>
       </div>
@@ -104,7 +104,7 @@ const STEPS: Step[] = [
         <div className="flex items-center gap-3">
           <MockCard>
             <span className="text-2xl">👩</span>
-            <span className="text-[10px] font-semibold">Sadia</span>
+            <span className="text-[10px] font-semibold">Fiona</span>
           </MockCard>
           <span className="text-stone-400">↔</span>
           <MockCard>
