@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Person } from "@/lib/api";
 import { PersonAutocomplete } from "@/components/PersonAutocomplete";
@@ -168,7 +169,7 @@ function emojiFor(gender: string | undefined | null): string {
 
 const PERSON_GAP = 150;
 
-export default function TreePage() {
+function TreePageInner() {
   const { data: people = [], isLoading } = useQuery({
     queryKey: ["persons", "all"],
     queryFn: () => api.listPersons(false),
@@ -180,7 +181,20 @@ export default function TreePage() {
     [people],
   );
 
-  const [rootId, setRootId] = useState<number | null>(null);
+  const searchParams = useSearchParams();
+  const rootParam = searchParams.get("root");
+  const initialRootId = rootParam ? parseInt(rootParam, 10) : NaN;
+  const [rootId, setRootId] = useState<number | null>(
+    Number.isFinite(initialRootId) ? initialRootId : null,
+  );
+
+  // If the URL changes (e.g. user clicks "View family tree from here" on a
+  // different person while already on /tree), follow it.
+  useEffect(() => {
+    if (!rootParam) return;
+    const id = parseInt(rootParam, 10);
+    if (Number.isFinite(id)) setRootId(id);
+  }, [rootParam]);
   // Compute translate based on container width so the tree centers on mobile/desktop.
   const [containerWidth, setContainerWidth] = useState<number>(800);
 
@@ -391,6 +405,14 @@ export default function TreePage() {
         👨 Male · 👩 Female · 👤 Other / unset · ♥ link = spouse
       </p>
     </section>
+  );
+}
+
+export default function TreePage() {
+  return (
+    <Suspense fallback={<p className="text-stone-500">Loading…</p>}>
+      <TreePageInner />
+    </Suspense>
   );
 }
 
