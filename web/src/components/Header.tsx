@@ -18,6 +18,7 @@ export function Header() {
       <Link href="/add" className="hover:text-emerald-700" onClick={() => setMenuOpen(false)}>Add</Link>
       <Link href="/relationship" className="hover:text-emerald-700" onClick={() => setMenuOpen(false)}>Relationship</Link>
       <Link href="/tree" className="hover:text-emerald-700" onClick={() => setMenuOpen(false)}>Tree</Link>
+      <Link href="/famous-trees" className="hover:text-emerald-700" onClick={() => setMenuOpen(false)}>Famous Trees</Link>
     </>
   );
 
