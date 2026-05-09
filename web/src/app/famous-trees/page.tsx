@@ -24,6 +24,46 @@ const FEATURED_TREES: FeaturedTree[] = [
     rootPersonId: 67,
     emoji: "👑",
   },
+  {
+    slug: "mughals",
+    label: "Mughal Emperors",
+    description:
+      "Babur to Bahadur Shah I — six generations of emperors, plus Mumtaz Mahal and the children of Shah Jahan. 19 people.",
+    rootPersonId: 91,
+    emoji: "🕌",
+  },
+  {
+    slug: "tagore",
+    label: "Tagore Family — Bengali Literary Dynasty",
+    description:
+      "Three generations centered on Nobel laureate Rabindranath Tagore, including the Bengal School artists Abanindranath and Gaganendranath. 21 people.",
+    rootPersonId: 110,
+    emoji: "📜",
+  },
+  {
+    slug: "nehru_gandhi",
+    label: "Nehru–Gandhi Family",
+    description:
+      "Motilal Nehru down to today — Jawaharlal, Indira, Rajiv, and the next generation. 19 people.",
+    rootPersonId: 131,
+    emoji: "🇮🇳",
+  },
+  {
+    slug: "greek_olympians",
+    label: "Greek Gods — Olympian Pantheon",
+    description:
+      "Mythological genealogy from Uranus and Gaia through Cronus to Zeus and the twelve Olympians. 26 figures.",
+    rootPersonId: 150,
+    emoji: "⚡",
+  },
+  {
+    slug: "house_stark",
+    label: "House Stark (A Song of Ice and Fire)",
+    description:
+      "Rickard Stark and his descendants — the Stark children of Winterfell, plus Jon Snow's true parentage. 17 figures.",
+    rootPersonId: 176,
+    emoji: "🐺",
+  },
 ];
 
 export default function FamousTreesPage() {
