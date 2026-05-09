@@ -85,8 +85,7 @@ export default function FamousTreesPage() {
       </div>
       <p className="mb-6 text-sm text-stone-600">
         These are curated public-domain genealogies you can browse to see
-        what AponRoots can do. They&apos;re read-only for everyone except
-        the demo account that owns them.
+        what AponRoots can do.
       </p>
 
       <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
